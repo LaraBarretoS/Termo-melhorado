@@ -36,18 +36,20 @@ const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 /* ==========================================================================
    CONEXÃO COM O BANCO DE DADOS (Postgres no Render / SQLite Local)
    ========================================================================== */
-const isRender = process.env.DATABASE_URL ? true : false;
+// O Render sempre injeta a variável RENDER=true automaticamente. É a forma mais segura de detectar o ambiente.
+const isRender = process.env.RENDER ? true : false;
 let dbSQLite;
 let poolPostgres;
 
 if (isRender) {
-  // Se estiver no Render, conecta ao Postgres estável e persistente
+  console.log("Ambiente Render detectado. Conectando ao PostgreSQL estável...");
+  
   poolPostgres = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false } // Obrigatório para a infraestrutura do Render
   });
 
-  // Criação da tabela no Postgres (sintaxe ligeiramente diferente para o ID autoincremento)
+  // Criação da tabela no Postgres (Usa SERIAL em vez de AUTOINCREMENT)
   poolPostgres.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -56,10 +58,12 @@ if (isRender) {
       points INTEGER DEFAULT 0,
       theme TEXT DEFAULT 'default'
     )
-  `).catch(err => console.error("Erro ao criar tabela no Postgres:", err));
+  `).then(() => {
+    console.log("Tabela 'users' verificada/criada com sucesso no PostgreSQL.");
+  }).catch(err => console.error("Erro crítico ao criar tabela no Postgres:", err));
 
 } else {
-  // Se estiver rodando local na sua máquina, continua usando seu arquivo SQLite normalmente
+  console.log("Executando localmente. Conectando ao banco SQLite...");
   const dbPath = path.join(__dirname, "database.db");
   dbSQLite = new sqlite3.Database(dbPath);
 
@@ -77,25 +81,23 @@ if (isRender) {
 // Função auxiliar para padronizar as consultas (Queries) entre os dois bancos
 function executarQuery(text, params, callback) {
   if (isRender) {
-    // No Postgres, os parâmetros usam $1, $2 em vez de ?. Vamos converter dinamicamente:
+    // No Postgres, os parâmetros usam $1, $2 em vez de ?. Convertendo dinamicamente:
     let index = 1;
-    const pgText = text.replace(/\?/g, () => `$${index++}`);
+    let pgText = text.replace(/\?/g, () => `$${index++}`);
     
-    // O Postgres nativo usa a função MAX de forma diferente em UPDATES, ajustamos o comando SQL se for o sync
-    let finalPgText = pgText;
-    if (pgText.includes("UPDATE users SET points = MAX(points")) {
-      finalPgText = `UPDATE users SET points = GREATEST(points, $1) WHERE username = $2`;
+    // Tratamento especial: O SQLite usa MAX(a, b) em Updates, mas o Postgres exige GREATEST(a, b)
+    if (pgText.includes("MAX(points")) {
+      pgText = pgText.replace(/MAX\((points),\s*\$(\d+)\)/g, "GREATEST($1, $2)");
     }
 
-    poolPostgres.query(finalPgText, params, (err, res) => {
+    poolPostgres.query(pgText, params, (err, res) => {
       if (err) return callback(err, null);
-      // Padroniza o retorno das linhas para ficar igual ao SQLite
       const rows = res.rows;
       const row = rows[0] || null;
       callback(null, { rows, row });
     });
   } else {
-    // Executa no SQLite local
+    // Execução tradicional no SQLite local
     if (text.trim().startsWith("SELECT")) {
       dbSQLite.all(text, params, (err, rows) => {
         if (err) return callback(err, null);
@@ -215,5 +217,5 @@ app.post("/score", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando com suporte a múltiplos ambientes.`);
+  console.log(`Servidor rodando com sucesso na porta ${PORT}.`);
 });

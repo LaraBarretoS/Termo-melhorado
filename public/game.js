@@ -78,7 +78,6 @@ async function loadRanking() {
     if (!list) return;
     list.innerHTML = "";
 
-    // Atualiza o título visual do ranking indicando qual nível está listado
     const rankingTitle = document.querySelector(".ranking-section h3");
     if (rankingTitle) rankingTitle.innerText = `Ranking - Nível ${currentLevel}`;
 
@@ -248,7 +247,6 @@ async function startNewGame() {
   boardsData = [];
   statusText.innerText = "";
   
-  // Define o número de palavras baseado no nível linear
   if (currentLevel === 1) currentMode = 1;
   if (currentLevel === 2) currentMode = 2;
   if (currentLevel === 3) currentMode = 4;
@@ -256,7 +254,6 @@ async function startNewGame() {
   boardContainer.innerHTML = "";
   boardContainer.className = `mode-${currentMode}`;
 
-  // Atualiza exibição de pontos e ranking para o nível ativo
   updatePointsDisplay();
   loadRanking();
 
@@ -378,7 +375,7 @@ function checkWord() {
 
   if (currentRow === MAX_ROWS) {
     statusText.innerText = `Fim de jogo! Resposta: ${targetWords.join(" | ")}`;
-    if (totalRoundScore > 0) saveScore(totalRoundScore);
+    saveScore(totalRoundScore); 
     showEndGameModal(false);
     return;
   }
@@ -394,16 +391,26 @@ function checkWord() {
   renderActiveTileIndicator();
 }
 
+/* =========================
+   SALVAR SCORE (Com validação de acertos mínimos)
+========================= */
 async function saveScore(scorePoints) {
+  // Conta dinamicamente se o usuário acertou pelo menos uma das palavras
+  const wordsSolvedCount = boardsData.filter(b => b.solved).length;
+
   const response = await fetch("/score", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: currentUser.username, score: scorePoints, level: currentLevel })
+    body: JSON.stringify({ 
+      username: currentUser.username, 
+      score: scorePoints, 
+      level: currentLevel,
+      wordsSolved: wordsSolvedCount // Passa o número de acertos para o tratamento no server
+    })
   });
   const data = await response.json();
   
   if (data.success) {
-    // Atualiza dinamicamente a chave do respectivo nível na sessão local
     if (currentLevel === 1) currentUser.points_n1 = data.newPoints;
     if (currentLevel === 2) currentUser.points_n2 = data.newPoints;
     if (currentLevel === 3) currentUser.points_n3 = data.newPoints;
@@ -418,7 +425,6 @@ async function saveScore(scorePoints) {
    FLUXO DE POPUPS DO FIM DE JOGO
 ========================= */
 function showEndGameModal(isVictory) {
-  // Remove modais antigos caso existam
   const oldModal = document.getElementById("custom-modal");
   if (oldModal) oldModal.remove();
 
@@ -432,15 +438,17 @@ function showEndGameModal(isVictory) {
   const title = document.createElement("h2");
   title.innerText = isVictory ? "Sensacional! 🎉" : "Não foi dessa vez! 😢";
 
+  const wordsSolvedCount = boardsData.filter(b => b.solved).length;
+  const finalScoreToShow = wordsSolvedCount > 0 ? totalRoundScore : 0;
+
   const text = document.createElement("p");
   text.innerHTML = isVictory 
-    ? `Você superou o Nível ${currentLevel} fazendo <strong>+${totalRoundScore}</strong> pontos!`
-    : `Você acumulou parciais de <strong>+${totalRoundScore}</strong> pontos. As palavras eram: <br><strong>${targetWords.join(" | ")}</strong>`;
+    ? `Você superou o Nível ${currentLevel} fazendo <strong>+${finalScoreToShow}</strong> pontos!`
+    : `Você fez <strong>+${finalScoreToShow}</strong> pontos nesta rodada.<br><br>As palavras corretas eram:<br><strong>${targetWords.join(" | ")}</strong>`;
 
   const btnContainer = document.createElement("div");
   btnContainer.className = "modal-buttons";
 
-  // Botão 1: Resetar (Sempre dá F5 na página de acordo com as regras estabelecidas)
   const btnReset = document.createElement("button");
   btnReset.innerText = "Resetar (F5)";
   btnReset.className = "m-btn m-btn-reset";
@@ -450,7 +458,6 @@ function showEndGameModal(isVictory) {
 
   btnContainer.appendChild(btnReset);
 
-  // Configuração dos botões baseada no progresso linear do jogador
   if (currentLevel === 1) {
     if (isVictory) {
       const btnNext = document.createElement("button");
@@ -478,7 +485,6 @@ function showEndGameModal(isVictory) {
     }
   } 
   else if (currentLevel === 3) {
-    // No nível de 4 colunas, adiciona a opção de resetar as 4 colunas ou voltar à estaca inicial
     const btnBackTo1 = document.createElement("button");
     btnBackTo1.innerText = "Voltar ao Nível 1";
     btnBackTo1.className = "m-btn m-btn-back";

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Termo Clone</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+    <h1>TERMO</h1>
+
+    <form onsubmit="event.preventDefault(); login();" style="display: flex; flex-direction: column; gap: 15px;">
+      <input type="text" id="username" placeholder="Usuário" required>
+      <input type="password" id="password" placeholder="Senha" required>
+
+      <div class="buttons">
+        <button type="button" onclick="window.location.href='/cadastro'">Cadastrar</button>
+        <button type="submit">Entrar</button>
+      </div>
+    </form>
+
+    <p id="message"></p>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>

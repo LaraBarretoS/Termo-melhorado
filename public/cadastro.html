@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastrar</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+    <h1>CRIAR CONTA</h1>
+
+    <form onsubmit="event.preventDefault(); register();" style="display: flex; flex-direction: column; gap: 15px;">
+      <input type="text" id="username" placeholder="Usuário" required>
+      <input type="password" id="password" placeholder="Senha" required>
+
+      <div class="buttons">
+        <button type="submit">Cadastrar</button>
+        <button type="button" onclick="window.location.href='/login'">Voltar</button>
+      </div>
+    </form>
+
+    <p id="message"></p>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>

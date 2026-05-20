@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termo Clone</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-default" id="game-body">
+
+  <div class="main-layout">
+    
+    <div class="side-panel">
+      <div class="profile-section">
+        <h2>Perfil</h2>
+        
+        <div class="avatar-container">
+          <div id="profile-avatar" class="text-avatar">-</div>
+        </div>
+
+        <p>Jogador: <span id="profile-username">-</span></p>
+        <p>Pontos: <span id="profile-points">0</span></p>
+        
+        <label for="theme-select">Tema do Jogo:</label>
+        <select id="theme-select" onchange="changeTheme(this.value)">
+          <option value="default">Padrão (Escuro)</option>
+          <option value="light">Claro</option>
+          <option value="neon">Cyber Neon</option>
+          <option value="rosa">Doce Rosa (Claro)</option>
+          <option value="rosa-escuro">Rosa Escuro (Neon)</option>
+          <option value="azul">Oceano Azul</option>
+          <option value="verde">Floresta Verde</option>
+          <option value="vermelho">Fogo Vermelho</option>
+        </select>
+        
+        <button onclick="logout()" class="btn-logout">Sair</button>
+      </div>
+
+      <div class="ranking-section">
+        <h2>Top 10 Ranking</h2>
+        <ol id="ranking-list"></ol>
+      </div>
+    </div>
+
+    <div class="game-container">
+      <h1>TERMO</h1>
+      
+      <div id="board"></div>
+      
+      <p id="status"></p>
+
+      <div id="keyboard" class="keyboard-container"></div>
+    </div>
+
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

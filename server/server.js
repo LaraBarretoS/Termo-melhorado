@@ -33,13 +33,13 @@ app.get("/index.html", (req, res) => {
 });
 
 /* =========================
-   DB E TABELAS (Configurado para Nuvem/Render)
+   DB E TABELAS (Modo em Memória - 100% Grátis)
 ========================= */
-// Resolvido: O banco é instanciado uma única vez aqui no topo usando o caminho inteligente
-const dbPath = process.env.RENDER ? "/data/database.db" : path.join(__dirname, "database.db");
+// Se estiver no Render, usa o banco em memória (grátis), se estiver local, usa o arquivo normal
+const dbPath = process.env.RENDER ? ":memory:" : path.join(__dirname, "database.db");
 const db = new sqlite3.Database(dbPath);
 
-// Ajustado: Usando path.join para garantir que o Node ache o json em qualquer ambiente
+// Garante que o Node ache o json de palavras em qualquer ambiente
 const wordsPath = path.join(__dirname, "words.json");
 const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 

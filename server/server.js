@@ -20,9 +20,6 @@ function page(file) {
   };
 }
 
-/* =========================
-   ROTAS FIXAS
-========================= */
 app.get("/", page("login.html"));
 app.get("/login", page("login.html"));
 app.get("/cadastro", page("cadastro.html"));
@@ -33,22 +30,23 @@ app.get("/index.html", (req, res) => {
 });
 
 /* =========================
-   DB E TABELAS (Modo em Memória - 100% Grátis)
+   DB E TABELAS (Suporte a Rankings Separados)
 ========================= */
-// Se estiver no Render, usa o banco em memória (grátis), se estiver local, usa o arquivo normal
 const dbPath = process.env.RENDER ? ":memory:" : path.join(__dirname, "database.db");
 const db = new sqlite3.Database(dbPath);
 
-// Garante que o Node ache o json de palavras em qualquer ambiente
 const wordsPath = path.join(__dirname, "words.json");
 const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 
+// Criamos colunas individuais de pontos para cada nível
 db.run(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE,
     password TEXT,
-    points INTEGER DEFAULT 0,
+    points_n1 INTEGER DEFAULT 0,
+    points_n2 INTEGER DEFAULT 0,
+    points_n3 INTEGER DEFAULT 0,
     theme TEXT DEFAULT 'default'
   )
 `);
@@ -68,7 +66,9 @@ app.post("/login", (req, res) => {
     res.json({
       success: true,
       username: user.username,
-      points: user.points,
+      points_n1: user.points_n1,
+      points_n2: user.points_n2,
+      points_n3: user.points_n3,
       theme: user.theme
     });
   });
@@ -84,10 +84,15 @@ app.post("/register", async (req, res) => {
 });
 
 /* =========================
-   RANKING
+   RANKING SEPARADO POR NÍVEL
 ========================= */
 app.get("/ranking", (req, res) => {
-  db.all(`SELECT username, points FROM users ORDER BY points DESC LIMIT 10`, [], (err, rows) => {
+  const level = req.query.level || "1";
+  let column = "points_n1";
+  if (level === "2") column = "points_n2";
+  if (level === "3") column = "points_n3";
+
+  db.all(`SELECT username, ${column} AS points FROM users ORDER BY ${column} DESC LIMIT 10`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: "Erro ao buscar ranking" });
     res.json(rows);
   });
@@ -105,7 +110,7 @@ app.post("/update-theme", (req, res) => {
 });
 
 /* =========================
-   WORD & SCORE
+   WORD & SCORE DINÂMICO
 ========================= */
 app.get("/word", (req, res) => {
   const filtered = words.filter(w => w.length === 5);
@@ -114,11 +119,16 @@ app.get("/word", (req, res) => {
 });
 
 app.post("/score", (req, res) => {
-  const { username, score } = req.body;
-  db.run(`UPDATE users SET points = points + ? WHERE username = ?`, [score, username], function (err) {
+  const { username, score, level } = req.body;
+  
+  let column = "points_n1";
+  if (level === 2) column = "points_n2";
+  if (level === 3) column = "points_n3";
+
+  db.run(`UPDATE users SET ${column} = ${column} + ? WHERE username = ?`, [score, username], function (err) {
     if (err) return res.status(500).json({ error: "Erro ao salvar score" });
-    db.get(`SELECT points FROM users WHERE username = ?`, [username], (err, row) => {
-      res.json({ success: true, newPoints: row ? row.points : score });
+    db.get(`SELECT ${column} FROM users WHERE username = ?`, [username], (err, row) => {
+      res.json({ success: true, newPoints: row ? row[column] : score });
     });
   });
 });

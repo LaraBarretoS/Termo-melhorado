@@ -278,7 +278,7 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
    SISTEMA DE TEMAS COMPLETOS
    ========================================================================== */
 
-/* NOVO: Tema Preto e Vermelho (theme-dark-red) */
+/* Tema Vampire: Preto e Vermelho (theme-dark-red) */
 .theme-dark-red { background-color: #080808 !important; color: #ff3333 !important; }
 .theme-dark-red .side-panel, .theme-dark-red .ranking-item, .theme-dark-red .board { background-color: #121214; border-color: #ff1a1a; color: #ffffff; }
 .theme-dark-red .profile-section select { background: #080808; color: #ff3333; border-color: #ff1a1a; }
@@ -360,3 +360,14 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-vermelho .text-avatar { background-color: #ff1a1a; color: #2a0808; }
 .theme-vermelho .key-btn { background-color: #5c1111; color: #ff4d4d; }
 .theme-vermelho .modal-content { background-color: #420c0c; border-color: #ff1a1a; color: #ffffff; }
+
+/* Tema Roxo (theme-purple) */
+.theme-purple { background-color: #0b0612 !important; color: #ca9bf7 !important; }
+.theme-purple .side-panel, .theme-purple .ranking-item, .theme-purple .board { background-color: #160d24; border-color: #9d4edd; color: #ffffff; }
+.theme-purple .profile-section select { background: #0b0612; color: #ca9bf7; border-color: #9d4edd; }
+.theme-purple .tile { border-color: #3c1660; color: #ffffff; }
+.theme-purple .active-tile { border-bottom: 6px solid #9d4edd !important; }
+.theme-purple .text-avatar { background-color: #9d4edd; color: #0b0612; }
+.theme-purple h1 { color: #9d4edd; text-shadow: 0 0 10px rgba(157, 78, 221, 0.5); }
+.theme-purple .key-btn { background-color: #24143a; color: #ffffff; border: 1px solid #9d4edd; }
+.theme-purple .modal-content { background-color: #160d24; border-color: #9d4edd; color: #ffffff; }

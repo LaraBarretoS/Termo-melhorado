@@ -30,15 +30,14 @@ app.get("/index.html", (req, res) => {
 });
 
 /* =========================
-   DB E TABELAS (Suporte a Rankings Separados)
+   DB E TABELAS (Persistência Corrigida)
 ========================= */
-const dbPath = process.env.RENDER ? ":memory:" : path.join(__dirname, "database.db");
+const dbPath = path.join(__dirname, "database.db");
 const db = new sqlite3.Database(dbPath);
 
 const wordsPath = path.join(__dirname, "words.json");
 const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 
-// Criamos colunas individuais de pontos para cada nível
 db.run(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,12 +117,32 @@ app.get("/word", (req, res) => {
   res.json({ word });
 });
 
+// NOVA ROTA: Valida se a palavra digitada existe no arquivo words.json
+app.post("/validate-word", (req, res) => {
+  const { word } = req.body;
+  if (!word) return res.status(400).json({ valid: false });
+  
+  // Converte ambas para caixa alta para evitar problemas de case-sensitivity
+  const cleanWord = word.trim().toUpperCase();
+  const exists = words.some(w => w.toUpperCase() === cleanWord);
+  
+  res.json({ valid: exists });
+});
+
 app.post("/score", (req, res) => {
-  const { username, score, level } = req.body;
+  const { username, score, level, wordsSolved } = req.body;
   
   let column = "points_n1";
   if (level === 2) column = "points_n2";
   if (level === 3) column = "points_n3";
+
+  if (!wordsSolved || wordsSolved === 0) {
+    db.get(`SELECT ${column} FROM users WHERE username = ?`, [username], (err, row) => {
+      if (err) return res.status(500).json({ error: "Erro ao buscar dados do usuário" });
+      return res.json({ success: true, newPoints: row ? row[column] : 0 });
+    });
+    return;
+  }
 
   db.run(`UPDATE users SET ${column} = ${column} + ? WHERE username = ?`, [score, username], function (err) {
     if (err) return res.status(500).json({ error: "Erro ao salvar score" });

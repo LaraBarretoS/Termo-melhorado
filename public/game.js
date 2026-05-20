@@ -160,7 +160,8 @@ function renderActiveTileIndicator() {
   }
 }
 
-function pressKey(key) {
+// Tornada assíncrona (async) para poder aguardar a resposta da validação da palavra via fetch
+async function pressKey(key) {
   if (currentRow >= MAX_ROWS || boardsData.every(b => b.solved)) return;
 
   if (key === "ArrowLeft" || key === "ARROWLEFT") {
@@ -218,7 +219,29 @@ function pressKey(key) {
     const isComplete = guesses[firstActive][currentRow].every(letter => letter !== "");
     
     if (isComplete) {
-      checkWord();
+      const currentGuessStr = guesses[firstActive][currentRow].join("");
+      
+      statusText.innerText = "Verificando palavra...";
+      
+      try {
+        const checkRes = await fetch("/validate-word", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ word: currentGuessStr })
+        });
+        const checkData = await checkRes.json();
+        
+        if (checkData.valid) {
+          statusText.innerText = "";
+          checkWord();
+        } else {
+          statusText.innerText = "Essa palavra não existe no jogo!";
+        }
+      } catch (err) {
+        console.error("Erro ao validar palavra:", err);
+        // Se houver erro de rede/servidor, permite rodar por segurança
+        checkWord();
+      }
     } else {
       statusText.innerText = "Palavra incompleta";
     }
@@ -392,10 +415,9 @@ function checkWord() {
 }
 
 /* =========================
-   SALVAR SCORE (Com validação de acertos mínimos)
+   SALVAR SCORE
 ========================= */
 async function saveScore(scorePoints) {
-  // Conta dinamicamente se o usuário acertou pelo menos uma das palavras
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
 
   const response = await fetch("/score", {
@@ -405,7 +427,7 @@ async function saveScore(scorePoints) {
       username: currentUser.username, 
       score: scorePoints, 
       level: currentLevel,
-      wordsSolved: wordsSolvedCount // Passa o número de acertos para o tratamento no server
+      wordsSolved: wordsSolvedCount 
     })
   });
   const data = await response.json();

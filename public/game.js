@@ -38,7 +38,6 @@ function checkUserSession() {
   }
 }
 
-// NOVA FUNÇÃO: Garante que os dados locais sejam injetados de volta no banco para manter o ranking ativo
 async function syncUserWithServer() {
   if (!currentUser) return;
   try {
@@ -180,7 +179,7 @@ function renderActiveTileIndicator() {
   }
 }
 
-async function pressKey(key) {
+function pressKey(key) {
   if (currentRow >= MAX_ROWS || boardsData.every(b => b.solved)) return;
 
   if (key === "ArrowLeft" || key === "ARROWLEFT") {
@@ -238,28 +237,9 @@ async function pressKey(key) {
     const isComplete = guesses[firstActive][currentRow].every(letter => letter !== "");
     
     if (isComplete) {
-      const currentGuessStr = guesses[firstActive][currentRow].join("");
-      
-      statusText.innerText = "Verificando palavra...";
-      
-      try {
-        const checkRes = await fetch("/validate-word", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ word: currentGuessStr })
-        });
-        const checkData = await checkRes.json();
-        
-        if (checkData.valid) {
-          statusText.innerText = "";
-          checkWord();
-        } else {
-          statusText.innerText = "Essa palavra não existe no jogo!";
-        }
-      } catch (err) {
-        console.error("Erro ao validar palavra:", err);
-        checkWord();
-      }
+      // VALIDAÇÃO REMOVIDA: Roda a verificação do tabuleiro diretamente para aceitar qualquer palavra
+      statusText.innerText = "";
+      checkWord();
     } else {
       statusText.innerText = "Palavra incompleta";
     }
@@ -553,7 +533,7 @@ function logout() {
 ========================= */
 async function init() {
   checkUserSession();
-  await syncUserWithServer(); // Sincroniza os dados locais com o banco do servidor antes de carregar o jogo
+  await syncUserWithServer(); 
   await startNewGame();
 }
 

@@ -82,11 +82,9 @@ app.post("/register", async (req, res) => {
   });
 });
 
-// NOVA ROTA: Sincroniza e restaura o usuário no banco caso o servidor tenha reiniciado
 app.post("/sync-user", (req, res) => {
   const { username, points_n1, points_n2, points_n3, theme } = req.body;
   
-  // Tenta buscar o usuário. Se não existir no banco (porque o Render resetou o arquivo), ele recria com os pontos do localStorage
   db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, row) => {
     if (err) return res.status(500).json({ error: "Erro ao buscar usuário" });
     
@@ -100,7 +98,6 @@ app.post("/sync-user", (req, res) => {
         }
       );
     } else {
-      // Se o usuário já existe, garante que as pontuações estejam atualizadas com o maior valor
       db.run(
         `UPDATE users SET points_n1 = MAX(points_n1, ?), points_n2 = MAX(points_n2, ?), points_n3 = MAX(points_n3, ?) WHERE username = ?`,
         [points_n1 || 0, points_n2 || 0, points_n3 || 0, username],
@@ -146,16 +143,6 @@ app.get("/word", (req, res) => {
   const filtered = words.filter(w => w.length === 5);
   const word = filtered[Math.floor(Math.random() * filtered.length)];
   res.json({ word });
-});
-
-app.post("/validate-word", (req, res) => {
-  const { word } = req.body;
-  if (!word) return res.status(400).json({ valid: false });
-  
-  const cleanWord = word.trim().toUpperCase();
-  const exists = words.some(w => w.toUpperCase() === cleanWord);
-  
-  res.json({ valid: exists });
 });
 
 app.post("/score", (req, res) => {

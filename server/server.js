@@ -1,5 +1,6 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
+const { Pool } = require("pg"); // Adicionado o driver do Postgres
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const fs = require("fs");
@@ -29,35 +30,97 @@ app.get("/index.html", (req, res) => {
   res.redirect("/");
 });
 
-/* =========================
-   DB E TABELAS (Ranking Unificado Corrigido)
-========================= */
-const dbPath = path.join(__dirname, "database.db");
-const db = new sqlite3.Database(dbPath);
-
 const wordsPath = path.join(__dirname, "words.json");
 const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 
-// Criando a tabela agora centralizada em uma única coluna 'points'
-db.run(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    password TEXT,
-    points INTEGER DEFAULT 0,
-    theme TEXT DEFAULT 'default'
-  )
-`);
+/* ==========================================================================
+   CONEXÃO COM O BANCO DE DADOS (Postgres no Render / SQLite Local)
+   ========================================================================== */
+const isRender = process.env.DATABASE_URL ? true : false;
+let dbSQLite;
+let poolPostgres;
 
-/* =========================
-   AUTENTICAÇÃO E SINCRONIZAÇÃO
-========================= */
+if (isRender) {
+  // Se estiver no Render, conecta ao Postgres estável e persistente
+  poolPostgres = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+
+  // Criação da tabela no Postgres (sintaxe ligeiramente diferente para o ID autoincremento)
+  poolPostgres.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE,
+      password TEXT,
+      points INTEGER DEFAULT 0,
+      theme TEXT DEFAULT 'default'
+    )
+  `).catch(err => console.error("Erro ao criar tabela no Postgres:", err));
+
+} else {
+  // Se estiver rodando local na sua máquina, continua usando seu arquivo SQLite normalmente
+  const dbPath = path.join(__dirname, "database.db");
+  dbSQLite = new sqlite3.Database(dbPath);
+
+  dbSQLite.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE,
+      password TEXT,
+      points INTEGER DEFAULT 0,
+      theme TEXT DEFAULT 'default'
+    )
+  `);
+}
+
+// Função auxiliar para padronizar as consultas (Queries) entre os dois bancos
+function executarQuery(text, params, callback) {
+  if (isRender) {
+    // No Postgres, os parâmetros usam $1, $2 em vez de ?. Vamos converter dinamicamente:
+    let index = 1;
+    const pgText = text.replace(/\?/g, () => `$${index++}`);
+    
+    // O Postgres nativo usa a função MAX de forma diferente em UPDATES, ajustamos o comando SQL se for o sync
+    let finalPgText = pgText;
+    if (pgText.includes("UPDATE users SET points = MAX(points")) {
+      finalPgText = `UPDATE users SET points = GREATEST(points, $1) WHERE username = $2`;
+    }
+
+    poolPostgres.query(finalPgText, params, (err, res) => {
+      if (err) return callback(err, null);
+      // Padroniza o retorno das linhas para ficar igual ao SQLite
+      const rows = res.rows;
+      const row = rows[0] || null;
+      callback(null, { rows, row });
+    });
+  } else {
+    // Executa no SQLite local
+    if (text.trim().startsWith("SELECT")) {
+      dbSQLite.all(text, params, (err, rows) => {
+        if (err) return callback(err, null);
+        callback(null, { rows, row: rows[0] || null });
+      });
+    } else {
+      dbSQLite.run(text, params, function(err) {
+        if (err) return callback(err, null);
+        callback(null, { rows: [], row: null });
+      });
+    }
+  }
+}
+
+/* ==========================================================================
+   ROTAS DA API (Sincronizadas com a abstração do Banco)
+   ========================================================================== */
+
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-  db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
+  executarQuery(`SELECT * FROM users WHERE username = ?`, [username], async (err, resultado) => {
     if (err) return res.status(500).json({ error: "Erro no servidor" });
-    if (!user) return res.status(400).json({ error: "Usuário não encontrado" });
+    if (!resultado.row) return res.status(400).json({ error: "Usuário não encontrado" });
     
+    const user = resultado.row;
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(400).json({ error: "Senha incorreta" });
 
@@ -73,34 +136,32 @@ app.post("/login", (req, res) => {
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   const hash = await bcrypt.hash(password, 10);
-  db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hash], function (err) {
+  executarQuery(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hash], (err) => {
     if (err) return res.status(400).json({ error: "Usuário já existe" });
     res.json({ success: true });
   });
 });
 
-// Sincroniza e restaura o usuário na coluna global de pontos se o Render reiniciar
 app.post("/sync-user", (req, res) => {
   const { username, points, theme } = req.body;
   
-  db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, row) => {
+  executarQuery(`SELECT * FROM users WHERE username = ?`, [username], (err, resultado) => {
     if (err) return res.status(500).json({ error: "Erro ao buscar usuário" });
     
-    if (!row) {
-      db.run(
+    if (!resultado.row) {
+      executarQuery(
         `INSERT INTO users (username, password, points, theme) VALUES (?, ?, ?, ?)`,
         [username, "restored_account", points || 0, theme || 'default'],
-        function(err2) {
-          if (err2) return res.status(500).json({ error: "Erro ao recriar usuário no ranking" });
-          return res.json({ success: true, message: "Usuário restaurado no ranking com sucesso" });
+        (err2) => {
+          if (err2) return res.status(500).json({ error: "Erro ao recriar usuário" });
+          return res.json({ success: true, message: "Usuário restaurado" });
         }
       );
     } else {
-      // Garante a persistência mantendo a maior pontuação histórica acumulada no localStorage
-      db.run(
+      executarQuery(
         `UPDATE users SET points = MAX(points, ?) WHERE username = ?`,
         [points || 0, username],
-        function(err3) {
+        (err3) => {
           if (err3) return res.status(500).json({ error: "Erro ao atualizar pontos" });
           return res.json({ success: true, message: "Pontos sincronizados" });
         }
@@ -109,31 +170,24 @@ app.post("/sync-user", (req, res) => {
   });
 });
 
-/* =========================
-   RANKING GERAL UNIFICADO
-========================= */
 app.get("/ranking", (req, res) => {
-  // Busca os 10 melhores jogadores de forma global, independente do nível jogado
-  db.all(`SELECT username, points FROM users ORDER BY points DESC LIMIT 10`, [], (err, rows) => {
+  executarQuery(`SELECT username, points FROM users ORDER BY points DESC LIMIT 10`, [], (err, resultado) => {
     if (err) return res.status(500).json({ error: "Erro ao buscar ranking" });
-    res.json(rows);
+    res.json(resultado.rows);
   });
 });
 
-/* =========================
-   TEMAS
-========================= */
 app.post("/update-theme", (req, res) => {
   const { username, theme } = req.body;
-  db.run(`UPDATE users SET theme = ? WHERE username = ?`, [theme, username], function (err) {
+  executarQuery(`UPDATE users SET theme = ? WHERE username = ?`, [theme, username], (err) => {
     if (err) return res.status(500).json({ error: "Erro ao atualizar tema" });
     res.json({ success: true, theme });
   });
 });
 
-/* =========================
-   WORD & SCORE DINÂMICO
-========================= */
+/* ==========================================================================
+   PALAVRAS DO JOGO E CÁLCULO DE SCORE
+   ========================================================================== */
 app.get("/word", (req, res) => {
   const filtered = words.filter(w => w.length === 5);
   const word = filtered[Math.floor(Math.random() * filtered.length)];
@@ -144,22 +198,22 @@ app.post("/score", (req, res) => {
   const { username, score, wordsSolved } = req.body;
 
   if (!wordsSolved || wordsSolved === 0) {
-    db.get(`SELECT points FROM users WHERE username = ?`, [username], (err, row) => {
+    executarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err, resultado) => {
       if (err) return res.status(500).json({ error: "Erro ao buscar dados do usuário" });
-      return res.json({ success: true, newPoints: row ? row.points : 0 });
+      return res.json({ success: true, newPoints: resultado.row ? resultado.row.points : 0 });
     });
     return;
   }
 
-  db.run(`UPDATE users SET points = points + ? WHERE username = ?`, [score, username], function (err) {
+  executarQuery(`UPDATE users SET points = points + ? WHERE username = ?`, [score, username], (err) => {
     if (err) return res.status(500).json({ error: "Erro ao salvar score" });
-    db.get(`SELECT points FROM users WHERE username = ?`, [username], (err, row) => {
-      if (err) return res.status(500).json({ error: "Erro ao buscar nova pontuação" });
-      res.json({ success: true, newPoints: row ? row.points : score });
+    executarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err2, resultado) => {
+      if (err2) return res.status(500).json({ error: "Erro ao buscar nova pontuação" });
+      res.json({ success: true, newPoints: resultado.row ? resultado.row.points : score });
     });
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`Servidor rodando com suporte a múltiplos ambientes.`);
 });

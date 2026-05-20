@@ -38,6 +38,26 @@ function checkUserSession() {
   }
 }
 
+// NOVA FUNÇÃO: Garante que os dados locais sejam injetados de volta no banco para manter o ranking ativo
+async function syncUserWithServer() {
+  if (!currentUser) return;
+  try {
+    await fetch("/sync-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: currentUser.username,
+        points_n1: currentUser.points_n1 || 0,
+        points_n2: currentUser.points_n2 || 0,
+        points_n3: currentUser.points_n3 || 0,
+        theme: currentUser.theme || "default"
+      })
+    });
+  } catch (err) {
+    console.error("Erro ao sincronizar sessão com o ranking:", err);
+  }
+}
+
 function updatePointsDisplay() {
   let pts = currentUser.points_n1 || 0;
   if (currentLevel === 2) pts = currentUser.points_n2 || 0;
@@ -160,7 +180,6 @@ function renderActiveTileIndicator() {
   }
 }
 
-// Tornada assíncrona (async) para poder aguardar a resposta da validação da palavra via fetch
 async function pressKey(key) {
   if (currentRow >= MAX_ROWS || boardsData.every(b => b.solved)) return;
 
@@ -239,7 +258,6 @@ async function pressKey(key) {
         }
       } catch (err) {
         console.error("Erro ao validar palavra:", err);
-        // Se houver erro de rede/servidor, permite rodar por segurança
         checkWord();
       }
     } else {
@@ -535,6 +553,7 @@ function logout() {
 ========================= */
 async function init() {
   checkUserSession();
+  await syncUserWithServer(); // Sincroniza os dados locais com o banco do servidor antes de carregar o jogo
   await startNewGame();
 }
 

@@ -51,7 +51,7 @@ db.run(`
 `);
 
 /* =========================
-   AUTENTICAÇÃO
+   AUTENTICAÇÃO E SINCRONIZAÇÃO
 ========================= */
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
@@ -79,6 +79,37 @@ app.post("/register", async (req, res) => {
   db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hash], function (err) {
     if (err) return res.status(400).json({ error: "Usuário já existe" });
     res.json({ success: true });
+  });
+});
+
+// NOVA ROTA: Sincroniza e restaura o usuário no banco caso o servidor tenha reiniciado
+app.post("/sync-user", (req, res) => {
+  const { username, points_n1, points_n2, points_n3, theme } = req.body;
+  
+  // Tenta buscar o usuário. Se não existir no banco (porque o Render resetou o arquivo), ele recria com os pontos do localStorage
+  db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, row) => {
+    if (err) return res.status(500).json({ error: "Erro ao buscar usuário" });
+    
+    if (!row) {
+      db.run(
+        `INSERT INTO users (username, password, points_n1, points_n2, points_n3, theme) VALUES (?, ?, ?, ?, ?, ?)`,
+        [username, "restored_account", points_n1 || 0, points_n2 || 0, points_n3 || 0, theme || 'default'],
+        function(err2) {
+          if (err2) return res.status(500).json({ error: "Erro ao recriar usuário no ranking" });
+          return res.json({ success: true, message: "Usuário restaurado no ranking com sucesso" });
+        }
+      );
+    } else {
+      // Se o usuário já existe, garante que as pontuações estejam atualizadas com o maior valor
+      db.run(
+        `UPDATE users SET points_n1 = MAX(points_n1, ?), points_n2 = MAX(points_n2, ?), points_n3 = MAX(points_n3, ?) WHERE username = ?`,
+        [points_n1 || 0, points_n2 || 0, points_n3 || 0, username],
+        function(err3) {
+          if (err3) return res.status(500).json({ error: "Erro ao atualizar pontos" });
+          return res.json({ success: true, message: "Pontos sincronizados" });
+        }
+      );
+    }
   });
 });
 
@@ -117,12 +148,10 @@ app.get("/word", (req, res) => {
   res.json({ word });
 });
 
-// NOVA ROTA: Valida se a palavra digitada existe no arquivo words.json
 app.post("/validate-word", (req, res) => {
   const { word } = req.body;
   if (!word) return res.status(400).json({ valid: false });
   
-  // Converte ambas para caixa alta para evitar problemas de case-sensitivity
   const cleanWord = word.trim().toUpperCase();
   const exists = words.some(w => w.toUpperCase() === cleanWord);
   

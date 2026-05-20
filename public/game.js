@@ -26,7 +26,6 @@ function checkUserSession() {
     return;
   }
   
-  // Garante elementos padrão caso não existam nas variáveis
   if(document.getElementById("profile-username")) {
     document.getElementById("profile-username").innerText = currentUser.username;
   }
@@ -53,14 +52,11 @@ async function syncUserWithServer() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username: currentUser.username,
-        points_n1: Number(currentUser.points_n1) || 0,
-        points_n2: Number(currentUser.points_n2) || 0,
-        points_n3: Number(currentUser.points_n3) || 0,
+        points: Number(currentUser.points) || 0,
         theme: currentUser.theme || "default"
       })
     });
     
-    // CORREÇÃO CRUCIAL: Se o banco respondeu com sucesso, revalidamos localmente
     if (response.ok) {
       const data = await response.json();
       console.log("Sincronização realizada com sucesso:", data.message);
@@ -72,9 +68,7 @@ async function syncUserWithServer() {
 
 function updatePointsDisplay() {
   if (!currentUser) return;
-  let pts = Number(currentUser.points_n1) || 0;
-  if (currentLevel === 2) pts = Number(currentUser.points_n2) || 0;
-  if (currentLevel === 3) pts = Number(currentUser.points_n3) || 0;
+  let pts = Number(currentUser.points) || 0;
   
   const pointsEl = document.getElementById("profile-points");
   if (pointsEl) {
@@ -111,11 +105,11 @@ async function changeTheme(themeName, sendToServer = true) {
 }
 
 /* =========================
-   RANKING FILTRADO POR NÍVEL ATUAL
+   RANKING GERAL UNIFICADO
 ========================= */
 async function loadRanking() {
   try {
-    const response = await fetch(`/ranking?level=${currentLevel}`);
+    const response = await fetch(`/ranking`);
     if (!response.ok) throw new Error("Falha na requisição do ranking");
     
     const data = await response.json();
@@ -124,7 +118,7 @@ async function loadRanking() {
     list.innerHTML = "";
 
     const rankingTitle = document.querySelector(".ranking-section h3");
-    if (rankingTitle) rankingTitle.innerText = `Ranking - Nível ${currentLevel}`;
+    if (rankingTitle) rankingTitle.innerText = `Ranking Geral`;
 
     if (Array.isArray(data)) {
       data.forEach((player, index) => {
@@ -448,11 +442,27 @@ function checkWord() {
 }
 
 /* =========================
-   SALVAR SCORE
+   SALVAR SCORE COM MULTIPLICADORES
 ========================= */
 async function saveScore(scorePoints) {
   if (!currentUser) return;
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
+
+  // Se o jogador perdeu sem resolver nenhuma palavra da rodada, pontuação é zero
+  let rawScore = scorePoints;
+  if (wordsSolvedCount === 0) {
+    rawScore = 0;
+  }
+
+  // APLICAÇÃO DOS MULTIPLICADORES POR NÍVEL
+  let finalCalculatedScore = rawScore;
+  if (currentLevel === 1) {
+    finalCalculatedScore = Math.floor(rawScore * 1); // Nível 1: 1x pontos
+  } else if (currentLevel === 2) {
+    finalCalculatedScore = Math.floor(rawScore * 2); // Nível 2: 2x pontos
+  } else if (currentLevel === 3) {
+    finalCalculatedScore = Math.floor(rawScore * 2.5); // Nível 3: 2.5x pontos
+  }
 
   try {
     const response = await fetch("/score", {
@@ -460,17 +470,14 @@ async function saveScore(scorePoints) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         username: currentUser.username, 
-        score: scorePoints, 
-        level: currentLevel,
+        score: finalCalculatedScore, 
         wordsSolved: wordsSolvedCount 
       })
     });
     const data = await response.json();
     
     if (data.success) {
-      if (currentLevel === 1) currentUser.points_n1 = data.newPoints;
-      if (currentLevel === 2) currentUser.points_n2 = data.newPoints;
-      if (currentLevel === 3) currentUser.points_n3 = data.newPoints;
+      currentUser.points = data.newPoints;
       
       localStorage.setItem("user", JSON.stringify(currentUser));
       updatePointsDisplay();
@@ -499,11 +506,19 @@ function showEndGameModal(isVictory) {
   title.innerText = isVictory ? "Sensacional! 🎉" : "Não foi dessa vez! 😢";
 
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
-  const finalScoreToShow = wordsSolvedCount > 0 ? totalRoundScore : 0;
+  
+  // Exibição amigável do bônus aplicado no modal informativo
+  let multiplierText = "1x";
+  let multiplierVal = 1;
+  if(currentLevel === 2) { multiplierText = "2x (Bônus Dueto)"; multiplierVal = 2; }
+  if(currentLevel === 3) { multiplierText = "2.5x (Bônus Quarteto)"; multiplierVal = 2.5; }
+
+  const baseScore = wordsSolvedCount > 0 ? totalRoundScore : 0;
+  const finalScoreToShow = Math.floor(baseScore * multiplierVal);
 
   const text = document.createElement("p");
   text.innerHTML = isVictory 
-    ? `Você superou o Nível ${currentLevel} fazendo <strong>+${finalScoreToShow}</strong> pontos!`
+    ? `Você superou o Nível ${currentLevel} fazendo <strong>+${finalScoreToShow}</strong> pontos! <br><small>(Pontuação com multiplicador de ${multiplierText} aplicado)</small>`
     : `Você fez <strong>+${finalScoreToShow}</strong> pontos nesta rodada.<br><br>As palavras corretas eram:<br><strong>${targetWords.join(" | ")}</strong>`;
 
   const btnContainer = document.createElement("div");

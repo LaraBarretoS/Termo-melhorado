@@ -25,11 +25,18 @@ function checkUserSession() {
     window.location.href = "/login";
     return;
   }
-  document.getElementById("profile-username").innerText = currentUser.username;
+  
+  // Garante elementos padrão caso não existam nas variáveis
+  if(document.getElementById("profile-username")) {
+    document.getElementById("profile-username").innerText = currentUser.username;
+  }
+  
   updatePointsDisplay();
   
-  const initial = currentUser.username.charAt(0).toUpperCase();
-  document.getElementById("profile-avatar").innerText = initial;
+  if(document.getElementById("profile-avatar")) {
+    const initial = currentUser.username.charAt(0).toUpperCase();
+    document.getElementById("profile-avatar").innerText = initial;
+  }
 
   if (currentUser.theme) {
     changeTheme(currentUser.theme, false);
@@ -41,27 +48,38 @@ function checkUserSession() {
 async function syncUserWithServer() {
   if (!currentUser) return;
   try {
-    await fetch("/sync-user", {
+    const response = await fetch("/sync-user", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username: currentUser.username,
-        points_n1: currentUser.points_n1 || 0,
-        points_n2: currentUser.points_n2 || 0,
-        points_n3: currentUser.points_n3 || 0,
+        points_n1: Number(currentUser.points_n1) || 0,
+        points_n2: Number(currentUser.points_n2) || 0,
+        points_n3: Number(currentUser.points_n3) || 0,
         theme: currentUser.theme || "default"
       })
     });
+    
+    // CORREÇÃO CRUCIAL: Se o banco respondeu com sucesso, revalidamos localmente
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Sincronização realizada com sucesso:", data.message);
+    }
   } catch (err) {
     console.error("Erro ao sincronizar sessão com o ranking:", err);
   }
 }
 
 function updatePointsDisplay() {
-  let pts = currentUser.points_n1 || 0;
-  if (currentLevel === 2) pts = currentUser.points_n2 || 0;
-  if (currentLevel === 3) pts = currentUser.points_n3 || 0;
-  document.getElementById("profile-points").innerText = pts;
+  if (!currentUser) return;
+  let pts = Number(currentUser.points_n1) || 0;
+  if (currentLevel === 2) pts = Number(currentUser.points_n2) || 0;
+  if (currentLevel === 3) pts = Number(currentUser.points_n3) || 0;
+  
+  const pointsEl = document.getElementById("profile-points");
+  if (pointsEl) {
+    pointsEl.innerText = pts;
+  }
 }
 
 /* =========================
@@ -74,15 +92,21 @@ async function changeTheme(themeName, sendToServer = true) {
     body.classList.add(`theme-${themeName}`);
   }
 
-  currentUser.theme = themeName;
-  localStorage.setItem("user", JSON.stringify(currentUser));
+  if (currentUser) {
+    currentUser.theme = themeName;
+    localStorage.setItem("user", JSON.stringify(currentUser));
 
-  if (sendToServer) {
-    await fetch("/update-theme", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: currentUser.username, theme: themeName })
-    });
+    if (sendToServer) {
+      try {
+        await fetch("/update-theme", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: currentUser.username, theme: themeName })
+        });
+      } catch(e) {
+        console.error("Erro ao salvar tema no servidor", e);
+      }
+    }
   }
 }
 
@@ -92,6 +116,8 @@ async function changeTheme(themeName, sendToServer = true) {
 async function loadRanking() {
   try {
     const response = await fetch(`/ranking?level=${currentLevel}`);
+    if (!response.ok) throw new Error("Falha na requisição do ranking");
+    
     const data = await response.json();
     const list = document.getElementById("ranking-list");
     if (!list) return;
@@ -100,21 +126,23 @@ async function loadRanking() {
     const rankingTitle = document.querySelector(".ranking-section h3");
     if (rankingTitle) rankingTitle.innerText = `Ranking - Nível ${currentLevel}`;
 
-    data.forEach((player, index) => {
-      const itemDiv = document.createElement("li");
-      itemDiv.classList.add("ranking-item");
-      const playerInitial = player.username.charAt(0).toUpperCase();
+    if (Array.isArray(data)) {
+      data.forEach((player, index) => {
+        const itemDiv = document.createElement("li");
+        itemDiv.classList.add("ranking-item");
+        const playerInitial = player.username ? player.username.charAt(0).toUpperCase() : "?";
 
-      itemDiv.innerHTML = `
-        <span style="font-weight:bold; width:20px;">${index + 1}°</span>
-        <div class="ranking-avatar-text">${playerInitial}</div>
-        <div class="ranking-info">
-          <strong>${player.username}</strong><br>
-          <span style="font-size:12px; opacity:0.8;">${player.points} pts</span>
-        </div>
-      `;
-      list.appendChild(itemDiv);
-    });
+        itemDiv.innerHTML = `
+          <span style="font-weight:bold; width:20px;">${index + 1}°</span>
+          <div class="ranking-avatar-text">${playerInitial}</div>
+          <div class="ranking-info">
+            <strong>${player.username || "Anônimo"}</strong><br>
+            <span style="font-size:12px; opacity:0.8;">${player.points || 0} pts</span>
+          </div>
+        `;
+        list.appendChild(itemDiv);
+      });
+    }
   } catch (err) {
     console.error("Erro ao carregar o ranking:", err);
   }
@@ -130,6 +158,7 @@ const keyboardRows = [
 ];
 
 function createKeyboard() {
+  if (!keyboardContainer) return;
   keyboardContainer.innerHTML = "";
   keyboardRows.forEach(row => {
     const rowDiv = document.createElement("div");
@@ -172,7 +201,7 @@ function renderActiveTileIndicator() {
   document.querySelectorAll(".tile").forEach(tile => tile.classList.remove("active-tile"));
 
   for (let b = 0; b < currentMode; b++) {
-    if (!boardsData[b].solved) {
+    if (boardsData[b] && !boardsData[b].solved) {
       const activeTile = document.getElementById(`tile-${b}-${currentRow}-${currentCol}`);
       if (activeTile) activeTile.classList.add("active-tile");
     }
@@ -199,7 +228,7 @@ function pressKey(key) {
       const upperKey = key.toUpperCase();
       
       for (let b = 0; b < currentMode; b++) {
-        if (!boardsData[b].solved) {
+        if (boardsData[b] && !boardsData[b].solved) {
           guesses[b][currentRow][currentCol] = upperKey;
           updateTile(b, currentRow, currentCol, upperKey);
         }
@@ -213,10 +242,11 @@ function pressKey(key) {
   }
   else if (key === "Backspace" || key === "BACKSPACE") {
     const firstActive = boardsData.findIndex(b => !b.solved);
+    if(firstActive === -1) return;
     const tileHasContent = guesses[firstActive][currentRow][currentCol] !== "";
 
     for (let b = 0; b < currentMode; b++) {
-      if (!boardsData[b].solved) {
+      if (boardsData[b] && !boardsData[b].solved) {
         if (tileHasContent) {
           guesses[b][currentRow][currentCol] = "";
           updateTile(b, currentRow, currentCol, "");
@@ -234,14 +264,14 @@ function pressKey(key) {
   }
   else if (key === "Enter" || key === "ENTER") {
     const firstActive = boardsData.findIndex(b => !b.solved);
+    if(firstActive === -1) return;
     const isComplete = guesses[firstActive][currentRow].every(letter => letter !== "");
     
     if (isComplete) {
-      // VALIDAÇÃO REMOVIDA: Roda a verificação do tabuleiro diretamente para aceitar qualquer palavra
-      statusText.innerText = "";
+      if(statusText) statusText.innerText = "";
       checkWord();
     } else {
-      statusText.innerText = "Palavra incompleta";
+      if(statusText) statusText.innerText = "Palavra incompleta";
     }
   }
 }
@@ -266,17 +296,19 @@ async function startNewGame() {
   targetWords = [];
   guesses = [];
   boardsData = [];
-  statusText.innerText = "";
+  if(statusText) statusText.innerText = "";
   
   if (currentLevel === 1) currentMode = 1;
   if (currentLevel === 2) currentMode = 2;
   if (currentLevel === 3) currentMode = 4;
 
-  boardContainer.innerHTML = "";
-  boardContainer.className = `mode-${currentMode}`;
+  if(boardContainer) {
+    boardContainer.innerHTML = "";
+    boardContainer.className = `mode-${currentMode}`;
+  }
 
   updatePointsDisplay();
-  loadRanking();
+  await loadRanking();
 
   for (let b = 0; b < currentMode; b++) {
     try {
@@ -291,30 +323,32 @@ async function startNewGame() {
     boardsData.push({ solved: false });
   }
 
-  for (let b = 0; b < currentMode; b++) {
-    const boardEl = document.createElement("div");
-    boardEl.className = "board";
-    boardEl.id = `board-${b}`;
+  if(boardContainer) {
+    for (let b = 0; b < currentMode; b++) {
+      const boardEl = document.createElement("div");
+      boardEl.className = "board";
+      boardEl.id = `board-${b}`;
 
-    for (let r = 0; r < MAX_ROWS; r++) {
-      const rowEl = document.createElement("div");
-      rowEl.className = "row";
-      if (r === 0) rowEl.classList.add("row-active");
+      for (let r = 0; r < MAX_ROWS; r++) {
+        const rowEl = document.createElement("div");
+        rowEl.className = "row";
+        if (r === 0) rowEl.classList.add("row-active");
 
-      for (let c = 0; c < MAX_COLS; c++) {
-        const tile = document.createElement("div");
-        tile.className = "tile";
-        tile.id = `tile-${b}-${r}-${c}`;
-        
-        tile.addEventListener("click", () => {
-          if (r === currentRow) selectTile(c);
-        });
+        for (let c = 0; c < MAX_COLS; c++) {
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          tile.id = `tile-${b}-${r}-${c}`;
+          
+          tile.addEventListener("click", () => {
+            if (r === currentRow) selectTile(c);
+          });
 
-        rowEl.appendChild(tile);
+          rowEl.appendChild(tile);
+        }
+        boardEl.appendChild(rowEl);
       }
-      boardEl.appendChild(rowEl);
+      boardContainer.appendChild(boardEl);
     }
-    boardContainer.appendChild(boardEl);
   }
 
   createKeyboard();
@@ -330,6 +364,7 @@ function checkWord() {
 
   let roundPointsGained = 0; 
   const firstActive = boardsData.findIndex(b => !b.solved);
+  if(firstActive === -1) return;
   const currentGuessStr = guesses[firstActive][currentRow].join("");
 
   for (let b = 0; b < currentMode; b++) {
@@ -374,7 +409,7 @@ function checkWord() {
 
     if (currentGuessStr === targetWordStr) {
       boardsData[b].solved = true;
-      boardEl.classList.add("solved");
+      if(boardEl) boardEl.classList.add("solved");
 
       if (currentRow === 0) {
         roundPointsGained = roundPointsGained - (correctPosition * 3000 + correctLetters * 1000) + 20000;
@@ -387,7 +422,7 @@ function checkWord() {
   currentCol = 0;
 
   if (boardsData.every(b => b.solved)) {
-    statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts no Nível ${currentLevel}`;
+    if(statusText) statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts no Nível ${currentLevel}`;
     saveScore(totalRoundScore);
     showEndGameModal(true);
     currentRow = MAX_ROWS;
@@ -395,14 +430,14 @@ function checkWord() {
   }
 
   if (currentRow === MAX_ROWS) {
-    statusText.innerText = `Fim de jogo! Resposta: ${targetWords.join(" | ")}`;
+    if(statusText) statusText.innerText = `Fim de jogo! Resposta: ${targetWords.join(" | ")}`;
     saveScore(totalRoundScore); 
     showEndGameModal(false);
     return;
   }
 
   for (let b = 0; b < currentMode; b++) {
-    if (!boardsData[b].solved) {
+    if (boardsData[b] && !boardsData[b].solved) {
       const board = document.getElementById(`board-${b}`);
       if (board && board.children[currentRow]) {
         board.children[currentRow].classList.add("row-active");
@@ -416,28 +451,33 @@ function checkWord() {
    SALVAR SCORE
 ========================= */
 async function saveScore(scorePoints) {
+  if (!currentUser) return;
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
 
-  const response = await fetch("/score", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
-      username: currentUser.username, 
-      score: scorePoints, 
-      level: currentLevel,
-      wordsSolved: wordsSolvedCount 
-    })
-  });
-  const data = await response.json();
-  
-  if (data.success) {
-    if (currentLevel === 1) currentUser.points_n1 = data.newPoints;
-    if (currentLevel === 2) currentUser.points_n2 = data.newPoints;
-    if (currentLevel === 3) currentUser.points_n3 = data.newPoints;
+  try {
+    const response = await fetch("/score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        username: currentUser.username, 
+        score: scorePoints, 
+        level: currentLevel,
+        wordsSolved: wordsSolvedCount 
+      })
+    });
+    const data = await response.json();
     
-    localStorage.setItem("user", JSON.stringify(currentUser));
-    updatePointsDisplay();
-    loadRanking();
+    if (data.success) {
+      if (currentLevel === 1) currentUser.points_n1 = data.newPoints;
+      if (currentLevel === 2) currentUser.points_n2 = data.newPoints;
+      if (currentLevel === 3) currentUser.points_n3 = data.newPoints;
+      
+      localStorage.setItem("user", JSON.stringify(currentUser));
+      updatePointsDisplay();
+      await loadRanking();
+    }
+  } catch(e) {
+    console.error("Erro crítico ao salvar pontuação:", e);
   }
 }
 

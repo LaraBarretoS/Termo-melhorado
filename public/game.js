@@ -2,7 +2,7 @@ const boardContainer = document.getElementById("board");
 const statusText = document.getElementById("status");
 const keyboardContainer = document.getElementById("keyboard");
 
-let currentLevel = 1; // 1 = Termo, 2 = Dueto, 3 = Quarteto
+let currentLevel = 1; 
 let currentMode = 1;  
 let targetWords = []; 
 const MAX_ROWS = 6;
@@ -17,42 +17,90 @@ let boardsData = [];
 
 let currentUser = JSON.parse(localStorage.getItem("user"));
 
-/* =========================
-   SISTEMA DE RANKED (ELOS MILIONÁRIOS)
-========================= */
+/* ==========================================================================
+   SISTEMA DE RANKED (ELOS ATUALIZADOS ATÉ O RADIANTE)
+   ========================================================================== */
 function obterElo(pontos) {
-  if (pontos < 500000) return "Ferro";
-  if (pontos < 1000000) return "Bronze";
-  if (pontos < 1500000) return "Prata";
-  if (pontos < 2000000) return "Ouro";
-  if (pontos < 2500000) return "Platina";
+  if (pontos < 10000) return "Ferro";
+  if (pontos < 50000) return "Bronze";
+  if (pontos < 150000) return "Prata";
+  if (pontos < 500000) return "Ouro";
+  if (pontos < 1500000) return "Platina";
   if (pontos < 3000000) return "Diamante";
-  if (pontos < 3500000) return "Ascendente";
-  if (pontos < 4500000) return "Imortal";
+  if (pontos < 5000000) return "Ascendente";
+  if (pontos < 7000000) return "Imortal 1";
+  if (pontos < 9000000) return "Imortal 2";
+  if (pontos < 12000000) return "Imortal 3";
   return "Radiante";
 }
 
-/* =========================
+function formatarNomeImg(nomeElo) {
+  return nomeElo.toLowerCase().replace(/\s+/g, '_');
+}
+
+/* ==========================================================================
+   INTERAÇÃO DO MENU SUPERIOR DE COSMÉTICOS (ABAS E SELEÇÃO)
+   ========================================================================== */
+function toggleCosmeticsMenu() {
+  const menu = document.getElementById("cosmetics-dropdown");
+  if(menu) menu.style.display = menu.style.display === "none" ? "block" : "none";
+}
+
+function switchCosmeticsTab(tabId) {
+  document.querySelectorAll(".cosmetics-panel").forEach(p => p.style.display = "none");
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  
+  document.getElementById(tabId).style.display = "block";
+  if(tabId === 'tab-avatars') document.getElementById("btn-tab-avatars").classList.add("active");
+  if(tabId === 'tab-borders') document.getElementById("btn-tab-borders").classList.add("active");
+}
+
+async function selecionarAvatar(id) {
+  if (!currentUser) return;
+  currentUser.avatar = id;
+  localStorage.setItem("user", JSON.stringify(currentUser));
+  updatePointsDisplay();
+  await salvarCosmeticosNoServidor();
+}
+
+async function selecionarBorda(nomeBorda) {
+  if (!currentUser) return;
+  currentUser.border = nomeBorda;
+  localStorage.setItem("user", JSON.stringify(currentUser));
+  updatePointsDisplay();
+  await salvarCosmeticosNoServidor();
+}
+
+async function salvarCosmeticosNoServidor() {
+  try {
+    await fetch("/update-cosmetics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: currentUser.username,
+        avatar: currentUser.avatar || 1,
+        border: currentUser.border || "default"
+      })
+    });
+  } catch (err) {
+    console.error("Erro ao sincronizar cosméticos com o banco:", err);
+  }
+}
+
+/* ==========================================================================
    VERIFICAÇÃO DE LOGIN E PERFIL
-========================= */
+   ========================================================================== */
 function checkUserSession() {
   if (!currentUser) {
     window.location.href = "/login";
     return;
   }
   
-  if(document.getElementById("profile-username")) {
+  if (document.getElementById("profile-username")) {
     document.getElementById("profile-username").innerText = currentUser.username;
   }
   
   updatePointsDisplay();
-
-  // Exibe a imagem de avatar pré-definida ou a inicial se não houver asset gráfico configurado
-  if(document.getElementById("profile-avatar")) {
-    const avatarId = currentUser.avatar || 1;
-    // Se preferir usar imagens no HTML futuramente: `<img src="/assets/avatars/avatar_${avatarId}.png">`
-    document.getElementById("profile-avatar").innerText = currentUser.username.charAt(0).toUpperCase();
-  }
 
   if (currentUser.theme) {
     changeTheme(currentUser.theme, false);
@@ -90,15 +138,50 @@ function updatePointsDisplay() {
   let pts = Number(currentUser.points) || 0;
   
   const pointsEl = document.getElementById("profile-points");
+  const eloIconEl = document.getElementById("profile-elo-icon");
+  const avatarImgEl = document.getElementById("profile-avatar-img");
+  const borderImgEl = document.getElementById("profile-border-img");
+  
+  const eloAtual = obterElo(pts);
+
   if (pointsEl) {
-    const eloAtual = obterElo(pts);
-    pointsEl.innerHTML = `${pts} pts <br><span class="elo-tag elo-${eloAtual.toLowerCase()}" style="font-weight:bold; font-size:13px; color: #ff4655;">Elo: ${eloAtual}</span>`;
+    pointsEl.innerHTML = `${pts.toLocaleString()} pts <br><span class="elo-tag elo-${formatarNomeImg(eloAtual)}" style="font-weight:bold; font-size:13px; color: #ff4655;">Elo: ${eloAtual}</span>`;
   }
+
+  // Atualiza Foto Circular
+  if (avatarImgEl) {
+    avatarImgEl.src = `assets/avatars/avatar_${currentUser.avatar || 1}.png`;
+  }
+
+  // Atualiza Borda Sobreposta
+  if (borderImgEl) {
+    const borda = currentUser.border || "default";
+    if (borda === "default") {
+      borderImgEl.style.display = "none";
+    } else {
+      borderImgEl.src = `assets/borders/border_${borda}.png`;
+      borderImgEl.style.display = "block";
+    }
+  }
+
+  // Mini Ícone do Elo
+  if (eloIconEl) {
+    eloIconEl.src = `assets/elos/${formatarNomeImg(eloAtual)}.png`;
+    eloIconEl.alt = `Elo ${eloAtual}`;
+    eloIconEl.style.display = "block";
+  }
+
+  // Adiciona classe visual nos previews ativos da barra de cima
+  document.querySelectorAll(".item-select-preview").forEach(p => p.classList.remove("selected"));
+  const activeAv = document.getElementById(`preview-av-${currentUser.avatar || 1}`);
+  if(activeAv) activeAv.classList.add("selected");
+  const activeBr = document.getElementById(`preview-br-${currentUser.border || 'default'}`);
+  if(activeBr) activeBr.classList.add("selected");
 }
 
-/* =========================
+/* ==========================================================================
    CONTROLE DE TEMAS
-========================= */
+   ========================================================================== */
 async function changeTheme(themeName, sendToServer = true) {
   const body = document.getElementById("game-body");
   if (body) {
@@ -124,9 +207,9 @@ async function changeTheme(themeName, sendToServer = true) {
   }
 }
 
-/* =========================
-   RANKING GERAL UNIFICADO (COM SUPORTE A ELOS)
-========================= */
+/* ==========================================================================
+   RANKING GERAL COM FOTOS E BORDAS SOBREPOSTAS
+   ========================================================================== */
 async function loadRanking() {
   try {
     const response = await fetch(`/ranking`);
@@ -137,25 +220,33 @@ async function loadRanking() {
     if (!list) return;
     list.innerHTML = "";
 
-    const rankingTitle = document.querySelector(".ranking-section h3");
-    if (rankingTitle) rankingTitle.innerText = `Ranking Ranked`;
-
     if (Array.isArray(data)) {
       data.forEach((player, index) => {
-        const itemDiv = document.createElement("li");
-        itemDiv.classList.add("ranking-item");
-        const playerInitial = player.username ? player.username.charAt(0).toUpperCase() : "?";
+        const itemLi = document.createElement("li");
+        itemLi.classList.add("ranking-item");
         const playerElo = obterElo(player.points || 0);
+        
+        const hasBorder = player.border && player.border !== 'default';
+        const borderSrc = hasBorder ? `src="assets/borders/border_${player.border}.png"` : '';
+        const borderStyle = hasBorder ? 'display:block;' : 'display:none;';
 
-        itemDiv.innerHTML = `
-          <span style="font-weight:bold; width:20px;">${index + 1}°</span>
-          <div class="ranking-avatar-text border-${player.border || 'default'}">${playerInitial}</div>
-          <div class="ranking-info">
-            <strong>${player.username || "Anônimo"}</strong> <small style="color: #ff4655;">(${playerElo})</small><br>
-            <span style="font-size:12px; opacity:0.8;">${player.points || 0} pts</span>
+        itemLi.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-weight:bold; width:20px; text-align: left;">${index + 1}°</span>
+            
+            <div class="ranking-avatar-wrapper">
+              <img src="assets/avatars/avatar_${player.avatar || 1}.png" class="ranking-avatar-img">
+              <img ${borderSrc} class="ranking-border-overlay" style="${borderStyle}">
+            </div>
+
+            <div class="ranking-info">
+              <strong>${player.username || "Anônimo"}</strong> <small style="color: #ff4655;">(${playerElo})</small><br>
+              <span style="font-size:12px; opacity:0.8;">${(player.points || 0).toLocaleString()} pts</span>
+            </div>
           </div>
+          <img src="assets/elos/${formatarNomeImg(playerElo)}.png" alt="${playerElo}" class="ranking-elo-img" onerror="this.style.opacity='0'" style="width: 25px; height: 25px; object-fit: contain;">
         `;
-        list.appendChild(itemDiv);
+        list.appendChild(itemLi);
       });
     }
   } catch (err) {
@@ -163,9 +254,9 @@ async function loadRanking() {
   }
 }
 
-/* =========================
+/* ==========================================================================
    TECLADO VIRTUAL
-========================= */
+   ========================================================================== */
 const keyboardRows = [
   ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
   ["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ç"],
@@ -195,17 +286,15 @@ function createKeyboard() {
 function updateKeyboardColors(letter, status) {
   const btn = document.querySelector(`.key-btn[data-key='${letter}']`);
   if (!btn) return;
-
   if (btn.classList.contains("correct")) return;
-  if (btn.classList.contains("present" || "correct") && status === "absent") return;
-
+  if (btn.classList.contains("present") && status === "absent") return;
   btn.classList.remove("present", "absent");
   btn.classList.add(status);
 }
 
-/* =========================
+/* ==========================================================================
    SISTEMA DE DIGITAÇÃO E SELEÇÃO DE CAIXA
-========================= */
+   ========================================================================== */
 function selectTile(colIndex) {
   if (currentRow >= MAX_ROWS) return;
   currentCol = colIndex;
@@ -214,7 +303,6 @@ function selectTile(colIndex) {
 
 function renderActiveTileIndicator() {
   document.querySelectorAll(".tile").forEach(tile => tile.classList.remove("active-tile"));
-
   for (let b = 0; b < currentMode; b++) {
     if (boardsData[b] && !boardsData[b].solved) {
       const activeTile = document.getElementById(`tile-${b}-${currentRow}-${currentCol}`);
@@ -227,31 +315,21 @@ function pressKey(key) {
   if (currentRow >= MAX_ROWS || boardsData.every(b => b.solved)) return;
 
   if (key === "ArrowLeft" || key === "ARROWLEFT") {
-    if (currentCol > 0) {
-      currentCol--;
-      renderActiveTileIndicator();
-    }
+    if (currentCol > 0) { currentCol--; renderActiveTileIndicator(); }
   }
   else if (key === "ArrowRight" || key === "ARROWRIGHT") {
-    if (currentCol < MAX_COLS - 1) {
-      currentCol++;
-      renderActiveTileIndicator();
-    }
+    if (currentCol < MAX_COLS - 1) { currentCol++; renderActiveTileIndicator(); }
   }
   else if (/^[A-ZÇ]$/i.test(key) && key.length === 1) {
     if (currentCol < MAX_COLS) {
       const upperKey = key.toUpperCase();
-      
       for (let b = 0; b < currentMode; b++) {
         if (boardsData[b] && !boardsData[b].solved) {
           guesses[b][currentRow][currentCol] = upperKey;
           updateTile(b, currentRow, currentCol, upperKey);
         }
       }
-      
-      if (currentCol < MAX_COLS - 1) {
-        currentCol++;
-      }
+      if (currentCol < MAX_COLS - 1) currentCol++;
       renderActiveTileIndicator();
     }
   }
@@ -271,17 +349,13 @@ function pressKey(key) {
         }
       }
     }
-
-    if (!tileHasContent && currentCol > 0) {
-      currentCol--;
-    }
+    if (!tileHasContent && currentCol > 0) currentCol--;
     renderActiveTileIndicator();
   }
   else if (key === "Enter" || key === "ENTER") {
     const firstActive = boardsData.findIndex(b => !b.solved);
     if(firstActive === -1) return;
     const isComplete = guesses[firstActive][currentRow].every(letter => letter !== "");
-    
     if (isComplete) {
       if(statusText) statusText.innerText = "";
       checkWord();
@@ -301,9 +375,9 @@ function updateTile(boardIndex, row, col, letter) {
   if (tile) tile.textContent = letter;
 }
 
-/* =========================
+/* ==========================================================================
    GERENCIAMENTO DE NÍVEIS
-========================= */
+   ========================================================================== */
 async function startNewGame() {
   currentRow = 0;
   currentCol = 0;
@@ -353,11 +427,9 @@ async function startNewGame() {
           const tile = document.createElement("div");
           tile.className = "tile";
           tile.id = `tile-${b}-${r}-${c}`;
-          
           tile.addEventListener("click", () => {
             if (r === currentRow) selectTile(c);
           });
-
           rowEl.appendChild(tile);
         }
         boardEl.appendChild(rowEl);
@@ -365,14 +437,13 @@ async function startNewGame() {
       boardContainer.appendChild(boardEl);
     }
   }
-
   createKeyboard();
   renderActiveTileIndicator();
 }
 
-/* =========================
+/* ==========================================================================
    VALIDAÇÃO DA TENTATIVA
-========================= */
+   ========================================================================== */
 function checkWord() {
   document.querySelectorAll(".tile").forEach(t => t.classList.remove("active-tile"));
   document.querySelectorAll(".row-active").forEach(r => r.classList.remove("row-active"));
@@ -387,7 +458,6 @@ function checkWord() {
 
     const boardEl = document.getElementById(`board-${b}`);
     const targetWordStr = targetWords[b];
-
     const tileStatuses = Array(MAX_COLS).fill("absent");
     const used = Array(MAX_COLS).fill(false);
 
@@ -425,7 +495,6 @@ function checkWord() {
     if (currentGuessStr === targetWordStr) {
       boardsData[b].solved = true;
       if(boardEl) boardEl.classList.add("solved");
-
       if (currentRow === 0) {
         roundPointsGained = roundPointsGained - (correctPosition * 3000 + correctLetters * 1000) + 20000;
       }
@@ -446,7 +515,7 @@ function checkWord() {
 
   if (currentRow === MAX_ROWS) {
     if(statusText) statusText.innerText = `Fim de jogo!`;
-    saveScore(0); // Passando 0 resoluções para disparar o gatilho de perda/punição no servidor
+    saveScore(0); 
     showEndGameModal(false);
     return;
   }
@@ -462,20 +531,17 @@ function checkWord() {
   renderActiveTileIndicator();
 }
 
-/* =========================
+/* ==========================================================================
    SALVAR SCORE / APLICAR PUNIÇÃO GRAVE
-========================= */
+   ========================================================================== */
 async function saveScore(scorePoints) {
   if (!currentUser) return;
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
-
   let finalCalculatedScore = scorePoints;
 
-  // SE NÃO ACERTOU NENHUMA PALAVRA DA RODADA: Erro Grave (-15.000 pontos)
   if (wordsSolvedCount === 0) {
     finalCalculatedScore = -15000;
   } else {
-    // Aplicação dos Multiplicadores de Nível normais
     if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 2); 
     if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2.5); 
   }
@@ -491,7 +557,6 @@ async function saveScore(scorePoints) {
       })
     });
     const data = await response.json();
-    
     if (data.success) {
       currentUser.points = data.newPoints;
       localStorage.setItem("user", JSON.stringify(currentUser));
@@ -503,9 +568,9 @@ async function saveScore(scorePoints) {
   }
 }
 
-/* =========================
+/* ==========================================================================
    POPUPS DO FIM DE JOGO
-========================= */
+   ========================================================================== */
 function showEndGameModal(isVictory) {
   const oldModal = document.getElementById("custom-modal");
   if (oldModal) oldModal.remove();
@@ -521,11 +586,9 @@ function showEndGameModal(isVictory) {
   title.innerText = isVictory ? "Sensacional! 🎉" : "Derrota Comp! 😢";
 
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
-  
-  let multiplierText = "1x";
   let multiplierVal = 1;
-  if(currentLevel === 2) { multiplierText = "2x (Dueto)"; multiplierVal = 2; }
-  if(currentLevel === 3) { multiplierText = "2.5x (Quarteto)"; multiplierVal = 2.5; }
+  if(currentLevel === 2) multiplierVal = 2;
+  if(currentLevel === 3) multiplierVal = 2.5;
 
   const baseScore = wordsSolvedCount > 0 ? totalRoundScore : 0;
   const finalScoreToShow = wordsSolvedCount === 0 ? -15000 : Math.floor(baseScore * multiplierVal);
@@ -534,7 +597,7 @@ function showEndGameModal(isVictory) {
   if (wordsSolvedCount === 0) {
     text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu -15.000 PDL</span>.<br><br>As respostas eram:<br><strong>${targetWords.join(" | ")}</strong>`;
   } else {
-    text.innerHTML = `Você venceu no Nível ${currentLevel} garantindo <strong>+${finalScoreToShow}</strong> pontos! <br><small>(Multiplicador de ${multiplierText} incluso)</small>`;
+    text.innerHTML = `Você venceu no Nível ${currentLevel} garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!`;
   }
 
   const btnContainer = document.createElement("div");
@@ -543,50 +606,13 @@ function showEndGameModal(isVictory) {
   const btnReset = document.createElement("button");
   btnReset.innerText = "Fechar e Recarregar";
   btnReset.className = "m-btn m-btn-reset";
-  btnReset.addEventListener("click", () => {
-    window.location.reload();
-  });
-
+  btnReset.addEventListener("click", () => window.location.reload());
   btnContainer.appendChild(btnReset);
 
-  if (currentLevel === 1 && isVictory) {
-    const btnNext = document.createElement("button");
-    btnNext.innerText = "Mudar de Nível (Dueto)";
-    btnNext.className = "m-btn m-btn-next";
-    btnNext.addEventListener("click", () => {
-      currentLevel = 2;
-      modal.remove();
-      startNewGame();
-    });
-    btnContainer.appendChild(btnNext);
-  } 
-  else if (currentLevel === 2 && isVictory) {
-    const btnNext = document.createElement("button");
-    btnNext.innerText = "Mudar de Nível (Quarteto)";
-    btnNext.className = "m-btn m-btn-next";
-    btnNext.addEventListener("click", () => {
-      currentLevel = 3;
-      modal.remove();
-      startNewGame();
-    });
-    btnContainer.appendChild(btnNext);
-  } 
-  else if (currentLevel === 3) {
-    const btnBackTo1 = document.createElement("button");
-    btnBackTo1.innerText = "Voltar ao Nível 1";
-    btnBackTo1.className = "m-btn m-btn-back";
-    btnBackTo1.addEventListener("click", () => {
-      currentLevel = 1;
-      modal.remove();
-      startNewGame();
-    });
-    btnContainer.appendChild(btnBackTo1);
-  }
-
+  modal.appendChild(content);
   content.appendChild(title);
   content.appendChild(text);
   content.appendChild(btnContainer);
-  modal.appendChild(content);
   document.body.appendChild(modal);
 }
 
@@ -595,50 +621,20 @@ function logout() {
   window.location.href = "/login";
 }
 
-async function init() {
-  checkUserSession();
-  await syncUserWithServer(); 
-  await startNewGame();
-}
-
-
-// Sistema de definição automática de Elos atualizado até o Radiante
-function obterElo(pontos) {
-  if (pontos < 10000) return "Ferro";
-  if (pontos < 50000) return "Bronze";
-  if (pontos < 150000) return "Prata";
-  if (pontos < 500000) return "Ouro";
-  if (pontos < 1500000) return "Platina";
-  if (pontos < 3000000) return "Diamante";
-  if (pontos < 5000000) return "Ascendente";
-  if (pontos < 7000000) return "Imortal 1";
-  if (pontos < 9000000) return "Imortal 2";
-  if (pontos < 12000000) return "Imortal 3";
-  return "Radiante";
-}
-
-// Atualização do Modal de Conquistas para checar os novos Elos
+/* ==========================================================================
+   SISTEMA INTERATIVO DO MODAL DE CONQUISTAS
+   ========================================================================== */
 function openAchievementsModal() {
   const modal = document.getElementById("achievements-modal");
   if (!modal) return;
-
   modal.style.display = "flex";
-
-  const pts = Number(currentUser.points) || 0;
   
-  // Mapeamento de IDs do HTML com a pontuação necessária
+  const pts = Number(currentUser.points) || 0;
   const elosConfig = [
-    { id: "ach-ferro", min: 0 },
-    { id: "ach-bronze", min: 10000 },
-    { id: "ach-prata", min: 50000 },
-    { id: "ach-ouro", min: 150000 },
-    { id: "ach-platina", min: 500000 },
-    { id: "ach-diamante", min: 1500000 },
-    { id: "ach-ascendente", min: 3000000 },
-    { id: "ach-imortal1", min: 5000000 },
-    { id: "ach-imortal2", min: 7000000 },
-    { id: "ach-imortal3", min: 9000000 },
-    { id: "ach-radiante", min: 12000000 }
+    { id: "ach-ferro", min: 0 }, { id: "ach-bronze", min: 10000 }, { id: "ach-prata", min: 50000 },
+    { id: "ach-ouro", min: 150000 }, { id: "ach-platina", min: 500000 }, { id: "ach-diamante", min: 1500000 },
+    { id: "ach-ascendente", min: 3000000 }, { id: "ach-imortal1", min: 5000000 }, { id: "ach-imortal2", min: 7000000 },
+    { id: "ach-imortal3", min: 9000000 }, { id: "ach-radiante", min: 12000000 }
   ];
 
   elosConfig.forEach(elo => {
@@ -653,6 +649,20 @@ function openAchievementsModal() {
       }
     }
   });
+}
+
+function closeAchievementsModal() {
+  const modal = document.getElementById("achievements-modal");
+  if (modal) modal.style.display = "none";
+}
+
+/* ==========================================================================
+   INICIALIZAÇÃO DO JOGO
+   ========================================================================== */
+async function init() {
+  checkUserSession();
+  await syncUserWithServer(); 
+  await startNewGame();
 }
 
 init();

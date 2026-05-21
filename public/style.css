@@ -7,7 +7,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column; /* Alterado para empilhar a barra de cosméticos no topo */
   align-items: center;
   min-height: 100vh;
 }
@@ -22,7 +22,118 @@ body {
 }
 
 /* ==========================================================================
-   PAINEL LATERAL (PERFIL E RANKING)
+   NOVA BARRA SUPERIOR DE COSMÉTICOS (MENU RETRÁTIL / ABAS)
+   ========================================================================== */
+.top-cosmetics-bar {
+  background-color: #1a1a1c;
+  border-bottom: 2px solid #3a3a3c;
+  width: 100%;
+  padding: 12px;
+  text-align: center;
+  box-sizing: border-box;
+  z-index: 999;
+}
+
+.btn-toggle-cosmetics {
+  background-color: #ff4655;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-weight: bold;
+  font-size: 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: opacity 0.2s;
+}
+
+.btn-toggle-cosmetics:hover {
+  opacity: 0.9;
+}
+
+.cosmetics-dropdown {
+  background-color: #1a1a1c;
+  border: 1px solid #3a3a3c;
+  border-radius: 8px;
+  max-width: 500px;
+  margin: 12px auto 0 auto;
+  padding: 15px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.cosmetics-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #3a3a3c;
+  padding-bottom: 10px;
+}
+
+.tab-btn {
+  flex: 1;
+  background: #272729;
+  color: #a4a4a6;
+  border: 1px solid #3a3a3c;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: #ff4655;
+  color: white;
+  border-color: #ff4655;
+}
+
+.cosmetics-panel p {
+  font-size: 14px;
+  color: #a4a4a6;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.cosmetics-grid {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.item-select-preview {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid #3a3a3c;
+  cursor: pointer;
+  object-fit: cover;
+  transition: transform 0.2s, border-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  background: #272729;
+  color: #a4a4a6;
+  text-transform: uppercase;
+  box-sizing: border-box;
+}
+
+.item-select-preview:hover {
+  transform: scale(1.08);
+}
+
+.item-select-preview.selected {
+  border-color: #ff4655;
+  box-shadow: 0 0 8px rgba(255, 70, 85, 0.4);
+}
+
+/* ==========================================================================
+   PAINEL LATERAL E SISTEMA DE CAMADAS DO AVATAR/BORDA
    ========================================================================== */
 .side-panel {
   flex: 1;
@@ -36,31 +147,47 @@ body {
   align-self: flex-start;
 }
 
-.avatar-container {
+/* Container que centraliza as fotos empilhadas (Wrapper) */
+.profile-avatar-wrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 15px auto;
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  justify-content: center;
 }
 
-/* Estilo do Avatar por Texto (Gmail Style) */
-.text-avatar {
+/* Camada 1: Foto circular interna */
+.profile-avatar-circle {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background-color: #538d4e;
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 36px;
-  font-weight: bold;
-  text-transform: uppercase;
-  border: 3px solid transparent;
+  object-fit: cover;
+  z-index: 1;
+  background-color: #272729;
 }
 
-.elo-icon-img {
-  width: 80px;
-  height: 80px;
+/* Camada 2: Borda externa que cobre a foto */
+.profile-border-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100px;
+  height: 100px;
+  z-index: 2;
+  pointer-events: none; /* Garante que cliques ignorem a borda */
+  object-fit: contain;
+}
+
+/* Camada 3: Mini ícone do elo no canto */
+.profile-elo-icon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  z-index: 3;
   object-fit: contain;
 }
 
@@ -131,7 +258,7 @@ body {
   background-color: rgba(83, 141, 78, 0.1);
 }
 
-/* Ranking com Iniciais de Texto */
+/* Ranking com Suporte a Foto e Borda */
 .ranking-section h2 {
   margin-top: 0;
   margin-bottom: 15px;
@@ -155,21 +282,35 @@ body {
   background-color: #272729;
 }
 
-.ranking-avatar-text {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #616161;
-  color: white;
+.ranking-avatar-wrapper {
+  position: relative;
+  width: 50px;
+  height: 50px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  font-size: 14px;
-  font-weight: bold;
-  text-transform: uppercase;
+  justify-content: center;
 }
 
-.ranking-info { flex: 1; font-size: 14px; }
+.ranking-avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 1;
+  background-color: #1a1a1c;
+}
+
+.ranking-border-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50px;
+  height: 50px;
+  z-index: 2;
+  object-fit: contain;
+}
+
+.ranking-info { flex: 1; font-size: 14px; line-height: 1.3; }
 .ranking-elo-img {
   width: 32px;
   height: 32px;
@@ -323,7 +464,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-dark-red .profile-section select { background: #080808; color: #ff3333; border-color: #ff1a1a; }
 .theme-dark-red .tile { border-color: #3a0000; color: #ffffff; }
 .theme-dark-red .active-tile { border-bottom: 6px solid #ff1a1a !important; }
-.theme-dark-red .text-avatar { background-color: #ff1a1a; color: #080808; }
 .theme-dark-red h1 { color: #ff1a1a; text-shadow: 0 0 10px rgba(255, 26, 26, 0.5); }
 .theme-dark-red .key-btn { background-color: #221010; color: #ffffff; border: 1px solid #ff1a1a; }
 .theme-dark-red .modal-content { background-color: #121214; border-color: #ff1a1a; color: #ffffff; }
@@ -333,7 +473,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-light .profile-section select { background: #ffffff; color: #1a1a1b; border-color: #cccccc; }
 .theme-light .tile { border-color: #cccccc; color: #1a1a1b; }
 .theme-light .active-tile { border-bottom: 6px solid #4a4a4a !important; }
-.theme-light .text-avatar { background-color: #4a4a4a; }
 .theme-light .key-btn { background-color: #d3d6da; color: #1a1a1b; }
 .theme-light .modal-content { background-color: #ffffff; border-color: #cccccc; color: #1a1a1b; }
 
@@ -342,7 +481,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-neon .profile-section select { background: #0d0116; color: #ff00ff; border-color: #ff00ff; }
 .theme-neon .tile { border-color: #39006a; color: #00ffff; }
 .theme-neon .active-tile { border-bottom: 6px solid #00ffff !important; }
-.theme-neon .text-avatar { background-color: #18022b; border-color: #ff00ff; color: #ff00ff; text-shadow: 0 0 5px #ff00ff; }
 .theme-neon h1 { text-shadow: 0 0 8px #00ffff; }
 .theme-neon .key-btn { background-color: #39006a; color: #00ffff; border: 1px solid #ff00ff; }
 .theme-neon .modal-content { background-color: #18022b; border-color: #ff00ff; color: #00ffff; }
@@ -352,7 +490,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-rosa .profile-section select { background: #fff0f5; color: #d147a3; border-color: #ffb6c1; }
 .theme-rosa .tile { border-color: #ffb6c1; color: #d147a3; }
 .theme-rosa .active-tile { border-bottom: 6px solid #d147a3 !important; }
-.theme-rosa .text-avatar { background-color: #ff69b4; }
 .theme-rosa .key-btn { background-color: #ffb6c1; color: white; }
 .theme-rosa .modal-content { background-color: #ffe4e1; border-color: #ffb6c1; color: #d147a3; }
 
@@ -361,7 +498,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-rosa-escuro .profile-section select { background: #1a0513; color: #ff33aa; border-color: #ff33aa; }
 .theme-rosa-escuro .tile { border-color: #5e1747; color: #ffffff; }
 .theme-rosa-escuro .active-tile { border-bottom: 6px solid #ff33aa !important; }
-.theme-rosa-escuro .text-avatar { background-color: #5e1747; border-color: #ff33aa; color: #ff33aa; }
 .theme-rosa-escuro h1 { color: #ff33aa; text-shadow: 0 0 8px #ff33aa; }
 .theme-rosa-escuro .key-btn { background-color: #5e1747; color: #ffffff; border: 1px solid #ff33aa; }
 .theme-rosa-escuro .modal-content { background-color: #2d0b23; border-color: #ff33aa; color: #ffffff; }
@@ -371,7 +507,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-azul .profile-section select { background: #0f2027; color: #4fc3f7; border-color: #00bcd4; }
 .theme-azul .tile { border-color: #2c5364; color: #4fc3f7; }
 .theme-azul .active-tile { border-bottom: 6px solid #00bcd4 !important; }
-.theme-azul .text-avatar { background-color: #00bcd4; color: #0f2027; }
 .theme-azul .key-btn { background-color: #2c5364; color: #4fc3f7; }
 .theme-azul .modal-content { background-color: #203a43; border-color: #00bcd4; color: #ffffff; }
 
@@ -380,7 +515,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-verde .profile-section select { background: #1b3322; color: #a3e635; border-color: #3f6212; }
 .theme-verde .tile { border-color: #3f6212; color: #a3e635; }
 .theme-verde .active-tile { border-bottom: 6px solid #a3e635 !important; }
-.theme-verde .text-avatar { background-color: #3f6212; color: #a3e635; }
 .theme-verde .key-btn { background-color: #24422e; color: #a3e635; }
 .theme-verde .modal-content { background-color: #142419; border-color: #3f6212; color: #f0fdf4; }
 
@@ -389,7 +523,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-vermelho .profile-section select { background: #2a0808; color: #ff4d4d; border-color: #ff1a1a; }
 .theme-vermelho .tile { border-color: #5c1111; color: #ff4d4d; }
 .theme-vermelho .active-tile { border-bottom: 6px solid #ff1a1a !important; }
-.theme-vermelho .text-avatar { background-color: #ff1a1a; color: #2a0808; }
 .theme-vermelho .key-btn { background-color: #5c1111; color: #ff4d4d; }
 .theme-vermelho .modal-content { background-color: #420c0c; border-color: #ff1a1a; color: #ffffff; }
 
@@ -398,7 +531,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-purple .profile-section select { background: #0b0612; color: #ca9bf7; border-color: #9d4edd; }
 .theme-purple .tile { border-color: #3c1660; color: #ffffff; }
 .theme-purple .active-tile { border-bottom: 6px solid #9d4edd !important; }
-.theme-purple .text-avatar { background-color: #9d4edd; color: #0b0612; }
 .theme-purple h1 { color: #9d4edd; text-shadow: 0 0 10px rgba(157, 78, 221, 0.5); }
 .theme-purple .key-btn { background-color: #24143a; color: #ffffff; border: 1px solid #9d4edd; }
 .theme-purple .modal-content { background-color: #160d24; border-color: #9d4edd; color: #ffffff; }
@@ -408,8 +540,8 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
    ========================================================================== */
 @media (max-width: 768px) {
   body {
-    align-items: flex-start;
-    padding: 10px 0;
+    align-items: center;
+    padding: 0;
   }
 
   .main-layout {
@@ -427,11 +559,7 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
   }
 
   .profile-section {
-    display: block; /* Simplificado para compatibilidade com o botão absoluto */
-  }
-
-  .avatar-container {
-    margin-bottom: 15px;
+    display: block; 
   }
 
   .btn-logout-top {

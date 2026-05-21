@@ -11,15 +11,18 @@
   <div class="main-layout">
     
     <div class="side-panel">
-      <div class="profile-section">
+      <div class="profile-section" style="position: relative;">
+        <button onclick="logout()" class="btn-logout-top" title="Sair da Conta">✕ Sair</button>
+
         <h2>Perfil</h2>
         
-        <div class="avatar-container">
+        <div class="avatar-container" style="flex-direction: row; gap: 15px; justify-content: center; margin-bottom: 15px;">
           <div id="profile-avatar" class="text-avatar">-</div>
+          <img id="profile-elo-icon" src="" alt="Elo" class="elo-icon-img" style="display: none;">
         </div>
 
         <p>Jogador: <span id="profile-username">-</span></p>
-        <p>Pontos: <span id="profile-points">0</span></p>
+        <p id="profile-points-wrapper">Pontos: <span id="profile-points">0</span></p>
         
         <label for="theme-select">Tema do Jogo:</label>
         <select id="theme-select" onchange="changeTheme(this.value)">
@@ -35,7 +38,7 @@
           <option value="purple">Roxo Neon</option>
         </select>
         
-        <button onclick="logout()" class="btn-logout">Sair</button>
+        <button onclick="openAchievementsModal()" class="btn-achievements">Conquistas</button>
       </div>
 
       <div class="ranking-section">
@@ -54,6 +57,51 @@
       <div id="keyboard" class="keyboard-container"></div>
     </div>
 
+  </div>
+
+  <div id="achievements-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <h2>Suas Conquistas</h2>
+      <p>Acompanhe sua jornada rumo aos Elos mais altos do Servidor!</p>
+      
+     <div class="achievements-list" style="text-align: left; max-height: 300px; overflow-y: auto; margin-bottom: 20px; padding-right: 5px;">
+        <div class="achievement-card" id="ach-ferro">
+          <span class="ach-status">🔒</span> <strong>Início de Tudo:</strong> Alcance o Elo Ferro.
+        </div>
+        <div class="achievement-card" id="ach-bronze">
+          <span class="ach-status">🔒</span> <strong>Saindo da Lama:</strong> Alcance o Elo Bronze.
+        </div>
+        <div class="achievement-card" id="ach-prata">
+          <span class="ach-status">🔒</span> <strong>Evolução Constante:</strong> Alcance o Elo Prata.
+        </div>
+        <div class="achievement-card" id="ach-ouro">
+          <span class="ach-status">🔒</span> <strong>Brilho Dourado:</strong> Alcance o Elo Ouro.
+        </div>
+        <div class="achievement-card" id="ach-platina">
+          <span class="ach-status">🔒</span> <strong>Estrategista Frio:</strong> Alcance o Elo Platina.
+        </div>
+        <div class="achievement-card" id="ach-diamante">
+          <span class="ach-status">🔒</span> <strong>Mente de Diamante:</strong> Alcance o Elo Diamante.
+        </div>
+        <div class="achievement-card" id="ach-ascendente">
+          <span class="ach-status">🔒</span> <strong>Ascensão Heroica:</strong> Alcance o Elo Ascendente.
+        </div>
+        <div class="achievement-card" id="ach-imortal1">
+          <span class="ach-status">🔒</span> <strong>Veterano do Topo:</strong> Alcance o Elo Imortal 1.
+        </div>
+        <div class="achievement-card" id="ach-imortal2">
+          <span class="ach-status">🔒</span> <strong>Lenda Viva:</strong> Alcance o Elo Imortal 2.
+        </div>
+        <div class="achievement-card" id="ach-imortal3">
+          <span class="ach-status">🔒</span> <strong>Portão do Olimpo:</strong> Alcance o Elo Imortal 3.
+        </div>
+        <div class="achievement-card" id="ach-radiante">
+          <span class="ach-status">🔒</span> <strong>Divindade Absoluta:</strong> Alcance o Elo Radiante.
+        </div>
+      </div>
+
+      <button onclick="closeAchievementsModal()" class="m-btn m-btn-reset" style="width: 100%;">Fechar</button>
+    </div>
   </div>
 
   <script src="game.js"></script>

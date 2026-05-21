@@ -601,4 +601,58 @@ async function init() {
   await startNewGame();
 }
 
+
+// Sistema de definição automática de Elos atualizado até o Radiante
+function obterElo(pontos) {
+  if (pontos < 10000) return "Ferro";
+  if (pontos < 50000) return "Bronze";
+  if (pontos < 150000) return "Prata";
+  if (pontos < 500000) return "Ouro";
+  if (pontos < 1500000) return "Platina";
+  if (pontos < 3000000) return "Diamante";
+  if (pontos < 5000000) return "Ascendente";
+  if (pontos < 7000000) return "Imortal 1";
+  if (pontos < 9000000) return "Imortal 2";
+  if (pontos < 12000000) return "Imortal 3";
+  return "Radiante";
+}
+
+// Atualização do Modal de Conquistas para checar os novos Elos
+function openAchievementsModal() {
+  const modal = document.getElementById("achievements-modal");
+  if (!modal) return;
+
+  modal.style.display = "flex";
+
+  const pts = Number(currentUser.points) || 0;
+  
+  // Mapeamento de IDs do HTML com a pontuação necessária
+  const elosConfig = [
+    { id: "ach-ferro", min: 0 },
+    { id: "ach-bronze", min: 10000 },
+    { id: "ach-prata", min: 50000 },
+    { id: "ach-ouro", min: 150000 },
+    { id: "ach-platina", min: 500000 },
+    { id: "ach-diamante", min: 1500000 },
+    { id: "ach-ascendente", min: 3000000 },
+    { id: "ach-imortal1", min: 5000000 },
+    { id: "ach-imortal2", min: 7000000 },
+    { id: "ach-imortal3", min: 9000000 },
+    { id: "ach-radiante", min: 12000000 }
+  ];
+
+  elosConfig.forEach(elo => {
+    const card = document.getElementById(elo.id);
+    if (card) {
+      if (pts >= elo.min) {
+        card.classList.add("unlocked");
+        card.querySelector(".ach-status").textContent = "✅";
+      } else {
+        card.classList.remove("unlocked");
+        card.querySelector(".ach-status").textContent = "🔒";
+      }
+    }
+  });
+}
+
 init();

@@ -250,6 +250,34 @@ app.post("/score", (req, res) => {
   });
 });
 
+const express = require('express');
+const path = require('path');
+const app = express();
+
+// Linha crucial para que o Express sirva os arquivos de estilo, JS e imagens
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Exemplo da sua rota de ranking que o frontend consome
+app.get('/ranking', async (req, res) => {
+  try {
+    // Exemplo: Buscar usuários ordenados por pontos no banco Postgres
+    // const result = await db.query('SELECT username, points FROM users ORDER BY points DESC LIMIT 10');
+    // res.json(result.rows);
+    
+    res.json([
+      { username: "Iara", points: 2689500 },
+      { username: "Come Come", points: 251000 }
+    ]);
+  } catch (error) {
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando perfeitamente na porta ${PORT}`);
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor rodando com sucesso na porta ${PORT}.`);
 });

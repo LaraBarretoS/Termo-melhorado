@@ -1,6 +1,6 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
-const { Pool } = require("pg"); // Adicionado o driver do Postgres
+const { Pool } = require("pg"); // Driver do Postgres
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const fs = require("fs");
@@ -13,7 +13,8 @@ app.use(cors());
 app.use(express.json()); 
 
 const publicPath = path.join(__dirname, "../public");
-app.use(express.static(publicPath, { index: false }));
+// Linha crucial para que o Express sirva os arquivos de estilo, JS, imagens e assets do jogo
+app.use(express.static(publicPath));
 
 function page(file) {
   return (req, res) => {
@@ -86,7 +87,7 @@ if (isRender) {
   });
 }
 
-function executarQuery(text, params, callback) {
+function ejecutarQuery(text, params, callback) {
   if (isRender) {
     let index = 1;
     let pgText = text.replace(/\?/g, () => `$${index++}`);
@@ -126,7 +127,7 @@ function executarQuery(text, params, callback) {
 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-  executarQuery(`SELECT * FROM users WHERE username = ?`, [username], async (err, resultado) => {
+  ejecutarQuery(`SELECT * FROM users WHERE username = ?`, [username], async (err, resultado) => {
     if (err) return res.status(500).json({ error: "Erro no servidor" });
     if (!resultado.row) return res.status(400).json({ error: "Usuário não encontrado" });
     
@@ -148,7 +149,7 @@ app.post("/login", (req, res) => {
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   const hash = await bcrypt.hash(password, 10);
-  executarQuery(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hash], (err) => {
+  ejecutarQuery(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hash], (err) => {
     if (err) return res.status(400).json({ error: "Usuário já existe" });
     res.json({ success: true });
   });
@@ -157,11 +158,11 @@ app.post("/register", async (req, res) => {
 app.post("/sync-user", (req, res) => {
   const { username, points, theme, avatar, border } = req.body;
   
-  executarQuery(`SELECT * FROM users WHERE username = ?`, [username], (err, resultado) => {
+  ejecutarQuery(`SELECT * FROM users WHERE username = ?`, [username], (err, resultado) => {
     if (err) return res.status(500).json({ error: "Erro ao buscar usuário" });
     
     if (!resultado.row) {
-      executarQuery(
+      ejecutarQuery(
         `INSERT INTO users (username, password, points, theme, avatar, border) VALUES (?, ?, ?, ?, ?, ?)`,
         [username, "restored_account", points || 0, theme || 'default', avatar || 1, border || 'default'],
         (err2) => {
@@ -170,7 +171,7 @@ app.post("/sync-user", (req, res) => {
         }
       );
     } else {
-      executarQuery(
+      ejecutarQuery(
         `UPDATE users SET points = MAX(points, ?), theme = ?, avatar = ?, border = ? WHERE username = ?`,
         [points || 0, theme || 'default', avatar || 1, border || 'default', username],
         (err3) => {
@@ -184,7 +185,7 @@ app.post("/sync-user", (req, res) => {
 
 app.post("/update-cosmetics", (req, res) => {
   const { username, avatar, border } = req.body;
-  executarQuery(
+  ejecutarQuery(
     `UPDATE users SET avatar = ?, border = ? WHERE username = ?`,
     [avatar, border, username],
     (err) => {
@@ -195,7 +196,7 @@ app.post("/update-cosmetics", (req, res) => {
 });
 
 app.get("/ranking", (req, res) => {
-  executarQuery(`SELECT username, points, avatar, border FROM users ORDER BY points DESC LIMIT 10`, [], (err, resultado) => {
+  ejecutarQuery(`SELECT username, points, avatar, border FROM users ORDER BY points DESC LIMIT 10`, [], (err, resultado) => {
     if (err) return res.status(500).json({ error: "Erro ao buscar ranking" });
     res.json(resultado.rows);
   });
@@ -203,7 +204,7 @@ app.get("/ranking", (req, res) => {
 
 app.post("/update-theme", (req, res) => {
   const { username, theme } = req.body;
-  executarQuery(`UPDATE users SET theme = ? WHERE username = ?`, [theme, username], (err) => {
+  ejecutarQuery(`UPDATE users SET theme = ? WHERE username = ?`, [theme, username], (err) => {
     if (err) return res.status(500).json({ error: "Erro ao atualizar tema" });
     res.json({ success: true, theme });
   });
@@ -223,17 +224,16 @@ app.post("/score", (req, res) => {
 
   // Lógica de mitigação de perda ou checagem estática
   if (!wordsSolved || wordsSolved === 0) {
-    // Se o score enviado for negativo (punição direta por derrota)
     if (score < 0) {
-      executarQuery(`UPDATE users SET points = points + ? WHERE username = ?`, [score, username], (err) => {
+      ejecutarQuery(`UPDATE users SET points = points + ? WHERE username = ?`, [score, username], (err) => {
         if (err) return res.status(500).json({ error: "Erro ao aplicar perda de pontos" });
-        executarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err2, resultado) => {
+        ejecutarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err2, resultado) => {
           if (err2) return res.status(500).json({ error: "Erro ao buscar dados" });
           res.json({ success: true, newPoints: resultado.row ? resultado.row.points : 0 });
         });
       });
     } else {
-      executarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err, resultado) => {
+      ejecutarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err, resultado) => {
         if (err) return res.status(500).json({ error: "Erro ao buscar dados do usuário" });
         return res.json({ success: true, newPoints: resultado.row ? resultado.row.points : 0 });
       });
@@ -241,43 +241,18 @@ app.post("/score", (req, res) => {
     return;
   }
 
-  executarQuery(`UPDATE users SET points = points + ? WHERE username = ?`, [score, username], (err) => {
+  ejecutarQuery(`UPDATE users SET points = points + ? WHERE username = ?`, [score, username], (err) => {
     if (err) return res.status(500).json({ error: "Erro ao salvar score" });
-    executarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err2, resultado) => {
+    ejecutarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err2, resultado) => {
       if (err2) return res.status(500).json({ error: "Erro ao buscar nova pontuação" });
       res.json({ success: true, newPoints: resultado.row ? resultado.row.points : score });
     });
   });
 });
 
-const express = require('express');
-const path = require('path');
-const app = express();
-
-// Linha crucial para que o Express sirva os arquivos de estilo, JS e imagens
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Exemplo da sua rota de ranking que o frontend consome
-app.get('/ranking', async (req, res) => {
-  try {
-    // Exemplo: Buscar usuários ordenados por pontos no banco Postgres
-    // const result = await db.query('SELECT username, points FROM users ORDER BY points DESC LIMIT 10');
-    // res.json(result.rows);
-    
-    res.json([
-      { username: "Iara", points: 2689500 },
-      { username: "Come Come", points: 251000 }
-    ]);
-  } catch (error) {
-    res.status(500).json({ error: "Erro interno do servidor" });
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando perfeitamente na porta ${PORT}`);
-});
-
+/* ==========================================================================
+   INICIALIZAÇÃO DO SERVIDOR
+   ========================================================================== */
 app.listen(PORT, () => {
   console.log(`Servidor rodando com sucesso na porta ${PORT}.`);
 });

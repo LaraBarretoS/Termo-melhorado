@@ -339,8 +339,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-azul .active-tile { border-bottom: 6px solid #00bcd4 !important; }
 .theme-azul .text-avatar { background-color: #00bcd4; color: #0f2027; }
 .theme-azul .key-btn { background-color: #2c5364; color: #4fc3f7; }
-
-
 .theme-azul .modal-content { background-color: #203a43; border-color: #00bcd4; color: #ffffff; }
 
 /* Tema Verde */

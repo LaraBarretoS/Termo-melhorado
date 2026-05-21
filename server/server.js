@@ -36,7 +36,6 @@ const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 /* ==========================================================================
    CONEXÃO COM O BANCO DE DADOS (Postgres no Render / SQLite Local)
    ========================================================================== */
-// O Render sempre injeta a variável RENDER=true automaticamente. É a forma mais segura de detectar o ambiente.
 const isRender = process.env.RENDER ? true : false;
 let dbSQLite;
 let poolPostgres;
@@ -46,10 +45,9 @@ if (isRender) {
   
   poolPostgres = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false } // Obrigatório para a infraestrutura do Render
+    ssl: { rejectUnauthorized: false }
   });
 
-  // Criação da tabela no Postgres (Usa SERIAL em vez de AUTOINCREMENT)
   poolPostgres.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -59,7 +57,12 @@ if (isRender) {
       theme TEXT DEFAULT 'default'
     )
   `).then(() => {
-    console.log("Tabela 'users' verificada/criada com sucesso no PostgreSQL.");
+    // Garante as colunas para o sistema de elos, conquistas e cosméticos no Postgres
+    poolPostgres.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS avatar INTEGER DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS border TEXT DEFAULT 'default';
+    `).catch(err => console.error("Erro ao adicionar colunas de cosméticos no Postgres:", err));
   }).catch(err => console.error("Erro crítico ao criar tabela no Postgres:", err));
 
 } else {
@@ -67,27 +70,33 @@ if (isRender) {
   const dbPath = path.join(__dirname, "database.db");
   dbSQLite = new sqlite3.Database(dbPath);
 
-  dbSQLite.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE,
-      password TEXT,
-      points INTEGER DEFAULT 0,
-      theme TEXT DEFAULT 'default'
-    )
-  `);
+  dbSQLite.serialize(() => {
+    dbSQLite.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT,
+        points INTEGER DEFAULT 0,
+        theme TEXT DEFAULT 'default'
+      )
+    `);
+    // Garante as colunas localmente de forma segura
+    dbSQLite.run(`ALTER TABLE users ADD COLUMN avatar INTEGER DEFAULT 1`, () => {});
+    dbSQLite.run(`ALTER TABLE users ADD COLUMN border TEXT DEFAULT 'default'`, () => {});
+  });
 }
 
-// Função auxiliar para padronizar as consultas (Queries) entre os dois bancos
 function executarQuery(text, params, callback) {
   if (isRender) {
-    // No Postgres, os parâmetros usam $1, $2 em vez de ?. Convertendo dinamicamente:
     let index = 1;
     let pgText = text.replace(/\?/g, () => `$${index++}`);
     
-    // Tratamento especial: O SQLite usa MAX(a, b) em Updates, mas o Postgres exige GREATEST(a, b)
     if (pgText.includes("MAX(points")) {
       pgText = pgText.replace(/MAX\((points),\s*\$(\d+)\)/g, "GREATEST($1, $2)");
+    }
+    // Trava para impedir pontuação negativa no cálculo de perdas
+    if (pgText.includes("points + $1")) {
+      pgText = pgText.replace("points + $1", "GREATEST(0, points + $1)");
     }
 
     poolPostgres.query(pgText, params, (err, res) => {
@@ -97,7 +106,6 @@ function executarQuery(text, params, callback) {
       callback(null, { rows, row });
     });
   } else {
-    // Execução tradicional no SQLite local
     if (text.trim().startsWith("SELECT")) {
       dbSQLite.all(text, params, (err, rows) => {
         if (err) return callback(err, null);
@@ -113,7 +121,7 @@ function executarQuery(text, params, callback) {
 }
 
 /* ==========================================================================
-   ROTAS DA API (Sincronizadas com a abstração do Banco)
+   ROTAS DA API
    ========================================================================== */
 
 app.post("/login", (req, res) => {
@@ -130,7 +138,9 @@ app.post("/login", (req, res) => {
       success: true,
       username: user.username,
       points: user.points,
-      theme: user.theme
+      theme: user.theme,
+      avatar: user.avatar || 1,
+      border: user.border || "default"
     });
   });
 });
@@ -145,15 +155,15 @@ app.post("/register", async (req, res) => {
 });
 
 app.post("/sync-user", (req, res) => {
-  const { username, points, theme } = req.body;
+  const { username, points, theme, avatar, border } = req.body;
   
   executarQuery(`SELECT * FROM users WHERE username = ?`, [username], (err, resultado) => {
     if (err) return res.status(500).json({ error: "Erro ao buscar usuário" });
     
     if (!resultado.row) {
       executarQuery(
-        `INSERT INTO users (username, password, points, theme) VALUES (?, ?, ?, ?)`,
-        [username, "restored_account", points || 0, theme || 'default'],
+        `INSERT INTO users (username, password, points, theme, avatar, border) VALUES (?, ?, ?, ?, ?, ?)`,
+        [username, "restored_account", points || 0, theme || 'default', avatar || 1, border || 'default'],
         (err2) => {
           if (err2) return res.status(500).json({ error: "Erro ao recriar usuário" });
           return res.json({ success: true, message: "Usuário restaurado" });
@@ -161,19 +171,31 @@ app.post("/sync-user", (req, res) => {
       );
     } else {
       executarQuery(
-        `UPDATE users SET points = MAX(points, ?) WHERE username = ?`,
-        [points || 0, username],
+        `UPDATE users SET points = MAX(points, ?), theme = ?, avatar = ?, border = ? WHERE username = ?`,
+        [points || 0, theme || 'default', avatar || 1, border || 'default', username],
         (err3) => {
           if (err3) return res.status(500).json({ error: "Erro ao atualizar pontos" });
-          return res.json({ success: true, message: "Pontos sincronizados" });
+          return res.json({ success: true, message: "Dados sincronizados" });
         }
       );
     }
   });
 });
 
+app.post("/update-cosmetics", (req, res) => {
+  const { username, avatar, border } = req.body;
+  executarQuery(
+    `UPDATE users SET avatar = ?, border = ? WHERE username = ?`,
+    [avatar, border, username],
+    (err) => {
+      if (err) return res.status(500).json({ error: "Erro ao atualizar cosméticos" });
+      res.json({ success: true, avatar, border });
+    }
+  );
+});
+
 app.get("/ranking", (req, res) => {
-  executarQuery(`SELECT username, points FROM users ORDER BY points DESC LIMIT 10`, [], (err, resultado) => {
+  executarQuery(`SELECT username, points, avatar, border FROM users ORDER BY points DESC LIMIT 10`, [], (err, resultado) => {
     if (err) return res.status(500).json({ error: "Erro ao buscar ranking" });
     res.json(resultado.rows);
   });
@@ -199,11 +221,23 @@ app.get("/word", (req, res) => {
 app.post("/score", (req, res) => {
   const { username, score, wordsSolved } = req.body;
 
+  // Lógica de mitigação de perda ou checagem estática
   if (!wordsSolved || wordsSolved === 0) {
-    executarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err, resultado) => {
-      if (err) return res.status(500).json({ error: "Erro ao buscar dados do usuário" });
-      return res.json({ success: true, newPoints: resultado.row ? resultado.row.points : 0 });
-    });
+    // Se o score enviado for negativo (punição direta por derrota)
+    if (score < 0) {
+      executarQuery(`UPDATE users SET points = points + ? WHERE username = ?`, [score, username], (err) => {
+        if (err) return res.status(500).json({ error: "Erro ao aplicar perda de pontos" });
+        executarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err2, resultado) => {
+          if (err2) return res.status(500).json({ error: "Erro ao buscar dados" });
+          res.json({ success: true, newPoints: resultado.row ? resultado.row.points : 0 });
+        });
+      });
+    } else {
+      executarQuery(`SELECT points FROM users WHERE username = ?`, [username], (err, resultado) => {
+        if (err) return res.status(500).json({ error: "Erro ao buscar dados do usuário" });
+        return res.json({ success: true, newPoints: resultado.row ? resultado.row.points : 0 });
+      });
+    }
     return;
   }
 

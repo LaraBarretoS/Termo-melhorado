@@ -2,8 +2,8 @@ const boardContainer = document.getElementById("board");
 const statusText = document.getElementById("status");
 const keyboardContainer = document.getElementById("keyboard");
 
-let currentLevel = 1; // 1 = Termo (Nível 1), 2 = Dueto (Nível 2), 3 = Quarteto (Nível 3)
-let currentMode = 1;  // 1, 2 ou 4 palavras simultâneas
+let currentLevel = 1; // 1 = Termo, 2 = Dueto, 3 = Quarteto
+let currentMode = 1;  
 let targetWords = []; 
 const MAX_ROWS = 6;
 const MAX_COLS = 5;
@@ -16,6 +16,21 @@ let guesses = [];
 let boardsData = []; 
 
 let currentUser = JSON.parse(localStorage.getItem("user"));
+
+/* =========================
+   SISTEMA DE RANKED (ELOS MILIONÁRIOS)
+========================= */
+function obterElo(pontos) {
+  if (pontos < 500000) return "Ferro";
+  if (pontos < 1000000) return "Bronze";
+  if (pontos < 1500000) return "Prata";
+  if (pontos < 2000000) return "Ouro";
+  if (pontos < 2500000) return "Platina";
+  if (pontos < 3000000) return "Diamante";
+  if (pontos < 3500000) return "Ascendente";
+  if (pontos < 4500000) return "Imortal";
+  return "Radiante";
+}
 
 /* =========================
    VERIFICAÇÃO DE LOGIN E PERFIL
@@ -31,10 +46,12 @@ function checkUserSession() {
   }
   
   updatePointsDisplay();
-  
+
+  // Exibe a imagem de avatar pré-definida ou a inicial se não houver asset gráfico configurado
   if(document.getElementById("profile-avatar")) {
-    const initial = currentUser.username.charAt(0).toUpperCase();
-    document.getElementById("profile-avatar").innerText = initial;
+    const avatarId = currentUser.avatar || 1;
+    // Se preferir usar imagens no HTML futuramente: `<img src="/assets/avatars/avatar_${avatarId}.png">`
+    document.getElementById("profile-avatar").innerText = currentUser.username.charAt(0).toUpperCase();
   }
 
   if (currentUser.theme) {
@@ -53,7 +70,9 @@ async function syncUserWithServer() {
       body: JSON.stringify({
         username: currentUser.username,
         points: Number(currentUser.points) || 0,
-        theme: currentUser.theme || "default"
+        theme: currentUser.theme || "default",
+        avatar: currentUser.avatar || 1,
+        border: currentUser.border || "default"
       })
     });
     
@@ -72,7 +91,8 @@ function updatePointsDisplay() {
   
   const pointsEl = document.getElementById("profile-points");
   if (pointsEl) {
-    pointsEl.innerText = pts;
+    const eloAtual = obterElo(pts);
+    pointsEl.innerHTML = `${pts} pts <br><span class="elo-tag elo-${eloAtual.toLowerCase()}" style="font-weight:bold; font-size:13px; color: #ff4655;">Elo: ${eloAtual}</span>`;
   }
 }
 
@@ -105,7 +125,7 @@ async function changeTheme(themeName, sendToServer = true) {
 }
 
 /* =========================
-   RANKING GERAL UNIFICADO
+   RANKING GERAL UNIFICADO (COM SUPORTE A ELOS)
 ========================= */
 async function loadRanking() {
   try {
@@ -118,19 +138,20 @@ async function loadRanking() {
     list.innerHTML = "";
 
     const rankingTitle = document.querySelector(".ranking-section h3");
-    if (rankingTitle) rankingTitle.innerText = `Ranking Geral`;
+    if (rankingTitle) rankingTitle.innerText = `Ranking Ranked`;
 
     if (Array.isArray(data)) {
       data.forEach((player, index) => {
         const itemDiv = document.createElement("li");
         itemDiv.classList.add("ranking-item");
         const playerInitial = player.username ? player.username.charAt(0).toUpperCase() : "?";
+        const playerElo = obterElo(player.points || 0);
 
         itemDiv.innerHTML = `
           <span style="font-weight:bold; width:20px;">${index + 1}°</span>
-          <div class="ranking-avatar-text">${playerInitial}</div>
+          <div class="ranking-avatar-text border-${player.border || 'default'}">${playerInitial}</div>
           <div class="ranking-info">
-            <strong>${player.username || "Anônimo"}</strong><br>
+            <strong>${player.username || "Anônimo"}</strong> <small style="color: #ff4655;">(${playerElo})</small><br>
             <span style="font-size:12px; opacity:0.8;">${player.points || 0} pts</span>
           </div>
         `;
@@ -176,7 +197,7 @@ function updateKeyboardColors(letter, status) {
   if (!btn) return;
 
   if (btn.classList.contains("correct")) return;
-  if (btn.classList.contains("present") && status === "absent") return;
+  if (btn.classList.contains("present" || "correct") && status === "absent") return;
 
   btn.classList.remove("present", "absent");
   btn.classList.add(status);
@@ -281,7 +302,7 @@ function updateTile(boardIndex, row, col, letter) {
 }
 
 /* =========================
-   GERENCIAMENTO DE NÍVEIS LINEAR
+   GERENCIAMENTO DE NÍVEIS
 ========================= */
 async function startNewGame() {
   currentRow = 0;
@@ -416,7 +437,7 @@ function checkWord() {
   currentCol = 0;
 
   if (boardsData.every(b => b.solved)) {
-    if(statusText) statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts no Nível ${currentLevel}`;
+    if(statusText) statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts`;
     saveScore(totalRoundScore);
     showEndGameModal(true);
     currentRow = MAX_ROWS;
@@ -424,8 +445,8 @@ function checkWord() {
   }
 
   if (currentRow === MAX_ROWS) {
-    if(statusText) statusText.innerText = `Fim de jogo! Resposta: ${targetWords.join(" | ")}`;
-    saveScore(totalRoundScore); 
+    if(statusText) statusText.innerText = `Fim de jogo!`;
+    saveScore(0); // Passando 0 resoluções para disparar o gatilho de perda/punição no servidor
     showEndGameModal(false);
     return;
   }
@@ -442,26 +463,21 @@ function checkWord() {
 }
 
 /* =========================
-   SALVAR SCORE COM MULTIPLICADORES
+   SALVAR SCORE / APLICAR PUNIÇÃO GRAVE
 ========================= */
 async function saveScore(scorePoints) {
   if (!currentUser) return;
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
 
-  // Se o jogador perdeu sem resolver nenhuma palavra da rodada, pontuação é zero
-  let rawScore = scorePoints;
-  if (wordsSolvedCount === 0) {
-    rawScore = 0;
-  }
+  let finalCalculatedScore = scorePoints;
 
-  // APLICAÇÃO DOS MULTIPLICADORES POR NÍVEL
-  let finalCalculatedScore = rawScore;
-  if (currentLevel === 1) {
-    finalCalculatedScore = Math.floor(rawScore * 1); // Nível 1: 1x pontos
-  } else if (currentLevel === 2) {
-    finalCalculatedScore = Math.floor(rawScore * 2); // Nível 2: 2x pontos
-  } else if (currentLevel === 3) {
-    finalCalculatedScore = Math.floor(rawScore * 2.5); // Nível 3: 2.5x pontos
+  // SE NÃO ACERTOU NENHUMA PALAVRA DA RODADA: Erro Grave (-15.000 pontos)
+  if (wordsSolvedCount === 0) {
+    finalCalculatedScore = -15000;
+  } else {
+    // Aplicação dos Multiplicadores de Nível normais
+    if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 2); 
+    if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2.5); 
   }
 
   try {
@@ -478,7 +494,6 @@ async function saveScore(scorePoints) {
     
     if (data.success) {
       currentUser.points = data.newPoints;
-      
       localStorage.setItem("user", JSON.stringify(currentUser));
       updatePointsDisplay();
       await loadRanking();
@@ -489,7 +504,7 @@ async function saveScore(scorePoints) {
 }
 
 /* =========================
-   FLUXO DE POPUPS DO FIM DE JOGO
+   POPUPS DO FIM DE JOGO
 ========================= */
 function showEndGameModal(isVictory) {
   const oldModal = document.getElementById("custom-modal");
@@ -503,29 +518,30 @@ function showEndGameModal(isVictory) {
   content.className = "modal-content";
 
   const title = document.createElement("h2");
-  title.innerText = isVictory ? "Sensacional! 🎉" : "Não foi dessa vez! 😢";
+  title.innerText = isVictory ? "Sensacional! 🎉" : "Derrota Comp! 😢";
 
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
   
-  // Exibição amigável do bônus aplicado no modal informativo
   let multiplierText = "1x";
   let multiplierVal = 1;
-  if(currentLevel === 2) { multiplierText = "2x (Bônus Dueto)"; multiplierVal = 2; }
-  if(currentLevel === 3) { multiplierText = "2.5x (Bônus Quarteto)"; multiplierVal = 2.5; }
+  if(currentLevel === 2) { multiplierText = "2x (Dueto)"; multiplierVal = 2; }
+  if(currentLevel === 3) { multiplierText = "2.5x (Quarteto)"; multiplierVal = 2.5; }
 
   const baseScore = wordsSolvedCount > 0 ? totalRoundScore : 0;
-  const finalScoreToShow = Math.floor(baseScore * multiplierVal);
+  const finalScoreToShow = wordsSolvedCount === 0 ? -15000 : Math.floor(baseScore * multiplierVal);
 
   const text = document.createElement("p");
-  text.innerHTML = isVictory 
-    ? `Você superou o Nível ${currentLevel} fazendo <strong>+${finalScoreToShow}</strong> pontos! <br><small>(Pontuação com multiplicador de ${multiplierText} aplicado)</small>`
-    : `Você fez <strong>+${finalScoreToShow}</strong> pontos nesta rodada.<br><br>As palavras corretas eram:<br><strong>${targetWords.join(" | ")}</strong>`;
+  if (wordsSolvedCount === 0) {
+    text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu -15.000 PDL</span>.<br><br>As respostas eram:<br><strong>${targetWords.join(" | ")}</strong>`;
+  } else {
+    text.innerHTML = `Você venceu no Nível ${currentLevel} garantindo <strong>+${finalScoreToShow}</strong> pontos! <br><small>(Multiplicador de ${multiplierText} incluso)</small>`;
+  }
 
   const btnContainer = document.createElement("div");
   btnContainer.className = "modal-buttons";
 
   const btnReset = document.createElement("button");
-  btnReset.innerText = "Resetar (F5)";
+  btnReset.innerText = "Fechar e Recarregar";
   btnReset.className = "m-btn m-btn-reset";
   btnReset.addEventListener("click", () => {
     window.location.reload();
@@ -533,31 +549,27 @@ function showEndGameModal(isVictory) {
 
   btnContainer.appendChild(btnReset);
 
-  if (currentLevel === 1) {
-    if (isVictory) {
-      const btnNext = document.createElement("button");
-      btnNext.innerText = "Mudar de Nível (Dueto)";
-      btnNext.className = "m-btn m-btn-next";
-      btnNext.addEventListener("click", () => {
-        currentLevel = 2;
-        modal.remove();
-        startNewGame();
-      });
-      btnContainer.appendChild(btnNext);
-    }
+  if (currentLevel === 1 && isVictory) {
+    const btnNext = document.createElement("button");
+    btnNext.innerText = "Mudar de Nível (Dueto)";
+    btnNext.className = "m-btn m-btn-next";
+    btnNext.addEventListener("click", () => {
+      currentLevel = 2;
+      modal.remove();
+      startNewGame();
+    });
+    btnContainer.appendChild(btnNext);
   } 
-  else if (currentLevel === 2) {
-    if (isVictory) {
-      const btnNext = document.createElement("button");
-      btnNext.innerText = "Mudar de Nível (Quarteto)";
-      btnNext.className = "m-btn m-btn-next";
-      btnNext.addEventListener("click", () => {
-        currentLevel = 3;
-        modal.remove();
-        startNewGame();
-      });
-      btnContainer.appendChild(btnNext);
-    }
+  else if (currentLevel === 2 && isVictory) {
+    const btnNext = document.createElement("button");
+    btnNext.innerText = "Mudar de Nível (Quarteto)";
+    btnNext.className = "m-btn m-btn-next";
+    btnNext.addEventListener("click", () => {
+      currentLevel = 3;
+      modal.remove();
+      startNewGame();
+    });
+    btnContainer.appendChild(btnNext);
   } 
   else if (currentLevel === 3) {
     const btnBackTo1 = document.createElement("button");
@@ -583,9 +595,6 @@ function logout() {
   window.location.href = "/login";
 }
 
-/* =========================
-   INICIALIZAÇÃO DO ECOSSISTEMA
-========================= */
 async function init() {
   checkUserSession();
   await syncUserWithServer(); 

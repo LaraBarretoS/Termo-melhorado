@@ -339,6 +339,8 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-azul .active-tile { border-bottom: 6px solid #00bcd4 !important; }
 .theme-azul .text-avatar { background-color: #00bcd4; color: #0f2027; }
 .theme-azul .key-btn { background-color: #2c5364; color: #4fc3f7; }
+
+
 .theme-azul .modal-content { background-color: #203a43; border-color: #00bcd4; color: #ffffff; }
 
 /* Tema Verde */
@@ -371,3 +373,122 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 .theme-purple h1 { color: #9d4edd; text-shadow: 0 0 10px rgba(157, 78, 221, 0.5); }
 .theme-purple .key-btn { background-color: #24143a; color: #ffffff; border: 1px solid #9d4edd; }
 .theme-purple .modal-content { background-color: #160d24; border-color: #9d4edd; color: #ffffff; }
+
+/* ==========================================================================
+   ESTILOS RESPONSIVOS PARA CELULAR (MEDIA QUERY)
+   ========================================================================== */
+@media (max-width: 768px) {
+  body {
+    align-items: flex-start; /* Permite rolar a tela se o celular for muito pequeno */
+    padding: 10px 0;
+  }
+
+  .main-layout {
+    flex-direction: column; /* Joga o painel lateral para cima e o jogo para baixo */
+    gap: 20px;
+    padding: 10px;
+  }
+
+  /* Painel lateral mais compacto no celular */
+  .side-panel {
+    width: 100%;
+    box-sizing: border-box;
+    align-self: center;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .profile-section {
+    display: grid;
+    grid-template-columns: auto 1fr; /* Coloca o avatar do lado das infos para economizar espaço */
+    gap: 15px;
+    align-items: center;
+  }
+
+  .avatar-container {
+    grid-row: span 3;
+    margin-bottom: 0;
+  }
+
+  .profile-section h2, 
+  .profile-section label { 
+    display: none; /* Esconde títulos óbvios para limpar o visual */
+  }
+
+  .profile-section p {
+    margin: 2px 0;
+    font-size: 14px;
+  }
+
+  .profile-section select {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    grid-column: span 2; /* Select e botão ocupam a largura toda embaixo */
+  }
+
+  .btn-logout {
+    grid-column: span 2;
+    padding: 8px;
+  }
+
+  .ranking-section {
+    max-height: 150px;
+    overflow-y: auto; /* Se o ranking for grande, ganha barra de rolagem interna */
+  }
+
+  /* Ajuste da área do jogo */
+  .game-container {
+    width: 100%;
+  }
+
+  h1 {
+    font-size: 28px;
+    letter-spacing: 3px;
+    margin-bottom: 5px;
+  }
+
+  /* Reduz os tabuleiros para caberem lado a lado no Dueto/Quarteto do celular */
+  #board {
+    gap: 10px;
+  }
+
+  .mode-2, .mode-4 {
+    grid-template-columns: repeat(2, 1fr); /* Força a divisão correta na tela pequena */
+  }
+
+  /* Reduzindo o tamanho das letras (tiles) no celular */
+  .tile {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+    border-width: 1px;
+  }
+
+  /* No modo Quarteto (4 tabuleiros), as caixas precisam ser ainda menores no celular */
+  .mode-4 .tile {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .active-tile {
+    border-bottom: 4px solid #a4a4a6 !important;
+  }
+
+  /* Teclado Virtual feito para dedões */
+  .keyboard-container {
+    gap: 4px;
+    margin-top: 5px;
+    padding: 0 4px;
+  }
+
+  .keyboard-row {
+    gap: 3px;
+  }
+
+  .key-btn {
+    height: 48px; /* Teclas ligeiramente mais altas para facilitar o toque */
+    font-size: 12px;
+    border-radius: 3px;
+  }
+}

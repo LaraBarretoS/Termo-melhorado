@@ -37,30 +37,37 @@ const listaBordasReais = [
 ];
 
 /* ==========================================================================
-   SISTEMA DE RANKED (ELOS ATUALIZADOS ATÉ O RADIANTE)
+   SISTEMA DE RANKED (ELOS UNIFICADOS E CORRIGIDOS)
    ========================================================================== */
 function obterElo(pontos) {
-  if (pontos < 10000) return "Ferro";
-  if (pontos < 50000) return "Bronze";
-  if (pontos < 150000) return "Prata";
-  if (pontos < 500000) return "Ouro";
-  if (pontos < 1500000) return "Platina";
-  if (pontos < 3000000) return "Diamante";
-  if (pontos < 5000000) return "Ascendente";
-  if (pontos < 7000000) return "Imortal 1";
-  if (pontos < 9000000) return "Imortal 2";
-  if (pontos < 12000000) return "Imortal 3";
+  const pts = Number(pontos) || 0;
+  if (pts < 10000) return "Ferro";
+  if (pts < 50000) return "Bronze";
+  if (pts < 150000) return "Prata";
+  if (pts < 500000) return "Ouro";
+  if (pts < 1500000) return "Platina";
+  if (pts < 3000000) return "Diamante";
+  if (pts < 5000000) return "Ascendente";
+  if (pts < 7000000) return "Imortal 1";
+  if (pts < 9000000) return "Imortal 2";
+  if (pts < 12000000) return "Imortal 3";
   return "Radiante";
 }
 
-// Converte os nomes dos Elos para bater exatamente com seus arquivos png
+// Converte os nomes dos Elos para bater exatamente com seus arquivos png físicos
 function formatarNomeImg(nomeElo) {
   let nome = nomeElo.toLowerCase().trim();
+  if (nome === "ferro") return "iron";
+  if (nome === "bronze") return "bronze";
+  if (nome === "prata") return "silver";
+  if (nome === "ouro") return "gold";
+  if (nome === "platina") return "platinum";
+  if (nome === "diamante") return "diamond";     
+  if (nome === "ascendente") return "ascendant"; 
   if (nome === "imortal 1") return "immortal-1";
   if (nome === "imortal 2") return "immortal-2";
   if (nome === "imortal 3") return "immortal-3";
-  if (nome === "diamante") return "diamond";     
-  if (nome === "ascendente") return "ascendant"; 
+  if (nome === "radiante") return "radiant";
   return nome;
 }
 
@@ -124,7 +131,6 @@ function renderCosmeticsGrid() {
     }
   });
 
-  // Funções auxiliares internas para consistência de ID de borda
   function staticIdBorda(id) { return id === "Radiant-border" ? "Radiant-border" : id; }
   function StaticNomeBorda(id) { return id; }
 }
@@ -137,7 +143,7 @@ async function selecionarAvatar(nomeAvatar) {
   updatePointsDisplay();
   renderCosmeticsGrid();
   await salvarCosmeticosNoServidor();
-  await loadRanking(); // Recarrega o ranking imediatamente para atualizar sua foto localmente
+  await loadRanking(); 
 }
 
 async function selecionarBorda(idBorda) {
@@ -148,7 +154,7 @@ async function selecionarBorda(idBorda) {
   updatePointsDisplay();
   renderCosmeticsGrid();
   await salvarCosmeticosNoServidor();
-  await loadRanking(); // Recarrega o ranking imediatamente para atualizar sua borda localmente
+  await loadRanking(); 
 }
 
 async function salvarCosmeticosNoServidor() {
@@ -168,7 +174,7 @@ async function salvarCosmeticosNoServidor() {
 }
 
 /* ==========================================================================
-   VERIFICAÇÃO DE LOGIN E PERFIL
+   VERIFICAÇÃO DE LOGIN E PERFIL LOCAL
    ========================================================================== */
 function checkUserSession() {
   if (!currentUser) {
@@ -241,7 +247,6 @@ function updatePointsDisplay() {
     if (borda === "default") {
       borderImgEl.style.display = "none";
     } else {
-      // Trata possíveis diferenças de maiúsculas/minúsculas vindas da lista (Ex: Radiant-border)
       borderImgEl.src = `assets/borders/${borda}.png`;
       borderImgEl.style.display = "block";
     }
@@ -287,7 +292,7 @@ async function changeTheme(themeName, sendToServer = true) {
 }
 
 /* ==========================================================================
-   RANKING GERAL (CORREÇÃO DE RENDERIZAÇÃO E ATUALIZAÇÃO EM LOOP DE COSMÉTICOS)
+   RANKING GERAL CORRIGIDO (SINCRONIZAÇÃO EM TEMPO REAL)
    ========================================================================== */
 async function loadRanking() {
   try {
@@ -304,16 +309,24 @@ async function loadRanking() {
         const itemLi = document.createElement("li");
         itemLi.classList.add("ranking-item");
         
-        // Descobre o elo com base nos pontos retornados dinamicamente do banco
+        // Calcula o elo estritamente igual à regra unificada do perfil
         const playerElo = obterElo(player.points || 0);
         
-        // Verifica se o jogador possui borda ativa
-        const hasBorder = player.border && player.border !== 'default';
-        const borderSrc = hasBorder ? `src="assets/borders/${player.border}.png"` : '';
+        // CORREÇÃO DE SEGURANÇA: Se for a linha do jogador local, força o uso dos dados em cache
+        let playerAvatarFile = "Dino";
+        let playerBorderFile = "default";
+
+        if (currentUser && player.username === currentUser.username) {
+          playerAvatarFile = currentUser.avatar || "Dino";
+          playerBorderFile = currentUser.border || "default";
+        } else {
+          playerAvatarFile = typeof player.avatar === "string" && player.avatar.trim() !== "" ? player.avatar : "Dino";
+          playerBorderFile = player.border || "default";
+        }
+
+        const hasBorder = playerBorderFile !== 'default';
+        const borderSrc = hasBorder ? `src="assets/borders/${playerBorderFile}.png"` : '';
         const borderStyle = hasBorder ? 'display:block;' : 'display:none;';
-        
-        // CORREÇÃO MÁGICA: Lê dinamicamente o avatar individual de cada jogador cadastrado na API!
-        const playerAvatarFile = typeof player.avatar === "string" && player.avatar.trim() !== "" ? player.avatar : "Dino";
 
         itemLi.innerHTML = `
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -329,7 +342,7 @@ async function loadRanking() {
               <span style="font-size:12px; opacity:0.8;">${(player.points || 0).toLocaleString()} pts</span>
             </div>
           </div>
-          <img src="assets/elos/${formatarNomeImg(playerElo)}.png" alt="${playerElo}" class="ranking-elo-img" onerror="this.style.opacity='0'" style="width: 28px; height: 28px; object-fit: contain; display: block;">
+          <img src="assets/elos/${formatarNomeImg(playerElo)}.png" alt="${playerElo}" class="ranking-elo-img" onerror="this.style.display='none';" style="width: 28px; height: 28px; object-fit: contain; display: block;">
         `;
         list.appendChild(itemLi);
       });

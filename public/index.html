@@ -19,23 +19,12 @@
 
       <div id="tab-avatars" class="cosmetics-panel">
         <p>Escolha sua Foto de Perfil:</p>
-        <div class="cosmetics-grid">
-          <img src="assets/avatars/avatar_1.png" onclick="selecionarAvatar(1)" class="item-select-preview" id="preview-av-1">
-          <img src="assets/avatars/avatar_2.png" onclick="selecionarAvatar(2)" class="item-select-preview" id="preview-av-2">
-          <img src="assets/avatars/avatar_3.png" onclick="selecionarAvatar(3)" class="item-select-preview" id="preview-av-3">
-          <img src="assets/avatars/avatar_4.png" onclick="selecionarAvatar(4)" class="item-select-preview" id="preview-av-4">
-        </div>
+        <div class="cosmetics-grid" id="grid-avatars"></div>
       </div>
 
       <div id="tab-borders" class="cosmetics-panel" style="display: none;">
         <p>Escolha sua Borda de Destaque:</p>
-        <div class="cosmetics-grid">
-          <div onclick="selecionarBorda('default')" class="item-select-preview text-center" id="preview-br-default">Sem Borda</div>
-          <img src="assets/borders/border_bronze.png" onclick="selecionarBorda('bronze')" class="item-select-preview" id="preview-br-bronze">
-          <img src="assets/borders/border_silver.png" onclick="selecionarBorda('silver')" class="item-select-preview" id="preview-br-silver">
-          <img src="assets/borders/border_gold.png" onclick="selecionarBorda('gold')" class="item-select-preview" id="preview-br-gold">
-          <img src="assets/borders/border_radiante.png" onclick="selecionarBorda('radiante')" class="item-select-preview" id="preview-br-radiante">
-        </div>
+        <div class="cosmetics-grid" id="grid-borders"></div>
       </div>
     </div>
   </div>
@@ -48,8 +37,8 @@
         <h2>Perfil</h2>
         
         <div class="profile-avatar-wrapper">
-          <img id="profile-avatar-img" src="assets/avatars/avatar_1.png" alt="Avatar" class="profile-avatar-circle">
-          <img id="profile-border-img" src="" alt="" class="profile-border-overlay" style="display: none;">
+          <img id="profile-avatar-img" src="assets/avatars/Dino.jpg" alt="Avatar" class="profile-avatar-circle">
+          <img id="profile-border-img" src="" alt="Borda" class="profile-border-overlay" style="display: none;">
           <img id="profile-elo-icon" src="" alt="Elo" class="elo-icon-img" style="display: none;">
         </div>
 

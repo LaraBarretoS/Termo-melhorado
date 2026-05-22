@@ -18,6 +18,25 @@ let boardsData = [];
 let currentUser = JSON.parse(localStorage.getItem("user"));
 
 /* ==========================================================================
+   MAPEAMENTO DAS SUAS IMAGENS REAIS
+   ========================================================================== */
+const listaAvataresReais = ["Dino", "Dog", "Freddy", "Gator", "Gengar", "Giraffe", "Monkey", "Shrimp"];
+
+const listaBordasReais = [
+  { id: "default", nome: "Sem Borda" },
+  { id: "iron-border", nome: "Borda Ferro" },
+  { id: "bronze-border", nome: "Borda Bronze" },
+  { id: "silver-border", nome: "Borda Prata" },
+  { id: "gold-border", nome: "Borda Ouro" },
+  { id: "platinum-border", nome: "Borda Platina" },
+  { id: "diamond-border", nome: "Borda Diamante" },
+  { id: "imortal-1-border", nome: "Borda Imortal I" },
+  { id: "imortal-2-border", nome: "Borda Imortal II" },
+  { id: "imortal-3-border", nome: "Borda Imortal III" },
+  { id: "Radiant-border", nome: "Borda Radiante" } // Mantido R maiúsculo conforme seu print
+];
+
+/* ==========================================================================
    SISTEMA DE RANKED (ELOS ATUALIZADOS ATÉ O RADIANTE)
    ========================================================================== */
 function obterElo(pontos) {
@@ -34,8 +53,13 @@ function obterElo(pontos) {
   return "Radiante";
 }
 
+// Converte os nomes dos Elos para bater exatamente com seus arquivos png
 function formatarNomeImg(nomeElo) {
-  return nomeElo.toLowerCase().replace(/\s+/g, '_');
+  let nome = nomeElo.toLowerCase();
+  if (nome === "imortal 1") return "immortal-1";
+  if (nome === "imortal 2") return "immortal-2";
+  if (nome === "imortal 3") return "immortal-3";
+  return nome;
 }
 
 /* ==========================================================================
@@ -55,19 +79,66 @@ function switchCosmeticsTab(tabId) {
   if(tabId === 'tab-borders') document.getElementById("btn-tab-borders").classList.add("active");
 }
 
-async function selecionarAvatar(id) {
+// Renderiza dinamicamente as opções dentro do dropdown de cosméticos
+function renderCosmeticsGrid() {
+  const gridAvatars = document.getElementById("grid-avatars");
+  const gridBorders = document.getElementById("grid-borders");
+  if (!gridAvatars || !gridBorders || !currentUser) return;
+
+  // Garante valores padrão limpos caso o banco traga nulo ou o formato antigo numérico
+  const avatarAtual = typeof currentUser.avatar === "string" ? currentUser.avatar : "Dino";
+  const bordaAtual = currentUser.border || "default";
+
+  // 1. Renderizar fotos (.jpg)
+  gridAvatars.innerHTML = "";
+  listaAvataresReais.forEach(nomeAv => {
+    const img = document.createElement("img");
+    img.src = `assets/avatars/${nomeAv}.jpg`;
+    img.className = `item-select-preview ${avatarAtual === nomeAv ? 'selected' : ''}`;
+    img.title = nomeAv;
+    img.onclick = () => selecionarAvatar(nomeAv);
+    gridAvatars.appendChild(img);
+  });
+
+  // 2. Renderizar bordas (.png)
+  gridBorders.innerHTML = "";
+  listaBordasReais.forEach(borda => {
+    if (borda.id === "default") {
+      const div = document.createElement("div");
+      div.className = `item-select-preview ${bordaAtual === "default" ? 'selected' : ''}`;
+      div.style.display = "flex";
+      div.style.alignItems = "center";
+      div.style.justifyContent = "center";
+      div.style.fontSize = "12px";
+      div.innerText = borda.nome;
+      div.onclick = () => selecionarBorda("default");
+      gridBorders.appendChild(div);
+    } else {
+      const img = document.createElement("img");
+      img.src = `assets/borders/${borda.id}.png`;
+      img.className = `item-select-preview ${bordaAtual === borda.id ? 'selected' : ''}`;
+      img.title = borda.nome;
+      img.onclick = () => selecionarBorda(borda.id);
+      gridBorders.appendChild(img);
+    }
+  });
+}
+
+async function selecionarAvatar(nomeAvatar) {
   if (!currentUser) return;
-  currentUser.avatar = id;
+  currentUser.avatar = nomeAvatar;
   localStorage.setItem("user", JSON.stringify(currentUser));
   updatePointsDisplay();
+  renderCosmeticsGrid();
   await salvarCosmeticosNoServidor();
 }
 
-async function selecionarBorda(nomeBorda) {
+async function selecionarBorda(idBorda) {
   if (!currentUser) return;
-  currentUser.border = nomeBorda;
+  currentUser.border = idBorda;
   localStorage.setItem("user", JSON.stringify(currentUser));
   updatePointsDisplay();
+  renderCosmeticsGrid();
   await salvarCosmeticosNoServidor();
 }
 
@@ -78,7 +149,7 @@ async function salvarCosmeticosNoServidor() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username: currentUser.username,
-        avatar: currentUser.avatar || 1,
+        avatar: currentUser.avatar || "Dino",
         border: currentUser.border || "default"
       })
     });
@@ -101,6 +172,7 @@ function checkUserSession() {
   }
   
   updatePointsDisplay();
+  renderCosmeticsGrid();
 
   if (currentUser.theme) {
     changeTheme(currentUser.theme, false);
@@ -119,7 +191,7 @@ async function syncUserWithServer() {
         username: currentUser.username,
         points: Number(currentUser.points) || 0,
         theme: currentUser.theme || "default",
-        avatar: currentUser.avatar || 1,
+        avatar: currentUser.avatar || "Dino",
         border: currentUser.border || "default"
       })
     });
@@ -148,35 +220,29 @@ function updatePointsDisplay() {
     pointsEl.innerHTML = `${pts.toLocaleString()} pts <br><span class="elo-tag elo-${formatarNomeImg(eloAtual)}" style="font-weight:bold; font-size:13px; color: #ff4655;">Elo: ${eloAtual}</span>`;
   }
 
-  // Atualiza Foto Circular
+  // Atualiza Foto Circular (.jpg de acordo com seu print)
   if (avatarImgEl) {
-    avatarImgEl.src = `assets/avatars/avatar_${currentUser.avatar || 1}.png`;
+    const avatarSalvo = typeof currentUser.avatar === "string" ? currentUser.avatar : "Dino";
+    avatarImgEl.src = `assets/avatars/${avatarSalvo}.jpg`;
   }
 
-  // Atualiza Borda Sobreposta
+  // Atualiza Borda Sobreposta (.png de acordo com seu print)
   if (borderImgEl) {
     const borda = currentUser.border || "default";
     if (borda === "default") {
       borderImgEl.style.display = "none";
     } else {
-      borderImgEl.src = `assets/borders/border_${borda}.png`;
+      borderImgEl.src = `assets/borders/${borda}.png`;
       borderImgEl.style.display = "block";
     }
   }
 
-  // Mini Ícone do Elo
+  // Mini Ícone do Elo (.png de acordo com seu print)
   if (eloIconEl) {
     eloIconEl.src = `assets/elos/${formatarNomeImg(eloAtual)}.png`;
     eloIconEl.alt = `Elo ${eloAtual}`;
     eloIconEl.style.display = "block";
   }
-
-  // Adiciona classe visual nos previews ativos da barra de cima
-  document.querySelectorAll(".item-select-preview").forEach(p => p.classList.remove("selected"));
-  const activeAv = document.getElementById(`preview-av-${currentUser.avatar || 1}`);
-  if(activeAv) activeAv.classList.add("selected");
-  const activeBr = document.getElementById(`preview-br-${currentUser.border || 'default'}`);
-  if(activeBr) activeBr.classList.add("selected");
 }
 
 /* ==========================================================================
@@ -208,7 +274,7 @@ async function changeTheme(themeName, sendToServer = true) {
 }
 
 /* ==========================================================================
-   RANKING GERAL COM FOTOS E BORDAS SOBREPOSTAS
+   RANKING GERAL COM FOTOS E BORDAS SOBREPOSTAS COM OS NOVOS ARQUIVOS
    ========================================================================== */
 async function loadRanking() {
   try {
@@ -227,15 +293,18 @@ async function loadRanking() {
         const playerElo = obterElo(player.points || 0);
         
         const hasBorder = player.border && player.border !== 'default';
-        const borderSrc = hasBorder ? `src="assets/borders/border_${player.border}.png"` : '';
+        const borderSrc = hasBorder ? `src="assets/borders/${player.border}.png"` : '';
         const borderStyle = hasBorder ? 'display:block;' : 'display:none;';
+        
+        // Trata compatibilidade caso o player no banco ainda tenha o avatar antigo do tipo número
+        const playerAvatarFile = typeof player.avatar === "string" ? player.avatar : "Dino";
 
         itemLi.innerHTML = `
           <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-weight:bold; width:20px; text-align: left;">${index + 1}°</span>
             
             <div class="ranking-avatar-wrapper">
-              <img src="assets/avatars/avatar_${player.avatar || 1}.png" class="ranking-avatar-img">
+              <img src="assets/avatars/${playerAvatarFile}.jpg" class="ranking-avatar-img">
               <img ${borderSrc} class="ranking-border-overlay" style="${borderStyle}">
             </div>
 
@@ -532,7 +601,7 @@ function checkWord() {
 }
 
 /* ==========================================================================
-   SALVAR SCORE / APLICAR PUNIÇÃO GRAVE
+   SALVA O SCORE NO BANCO E ATUALIZA RELATÓRIOS
    ========================================================================== */
 async function saveScore(scorePoints) {
   if (!currentUser) return;

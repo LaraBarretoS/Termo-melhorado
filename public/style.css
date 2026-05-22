@@ -12,13 +12,17 @@ body {
   min-height: 100vh;
 }
 
+/* MODIFICADO: Sistema de 3 colunas balanceadas para telas grandes */
 .main-layout {
   display: flex;
-  gap: 40px;
-  max-width: 1200px;
+  justify-content: space-between;
+  align-items: flex-start;
+  max-width: 1400px;
   width: 100%;
   padding: 20px;
+  gap: 20px;
   box-sizing: border-box;
+  margin: 0 auto;
 }
 
 /* ==========================================================================
@@ -135,9 +139,9 @@ body {
 /* ==========================================================================
    PAINEL LATERAL E SISTEMA DO AVATAR/BORDA (ORGANIZADO)
    ========================================================================== */
+/* MODIFICADO: Fixado em largura de 300px para as duas colunas laterais */
 .side-panel {
-  width: 100%;
-  max-width: 320px;
+  flex: 0 0 300px;
   background-color: #1a1a1c;
   padding: 20px;
   border-radius: 10px;
@@ -295,6 +299,10 @@ body {
 /* ==========================================================================
    RANKING COM SUPORTE A FOTO E BORDA
    ========================================================================== */
+.ranking-section {
+  width: 100%;
+}
+
 .ranking-section h2 {
   margin-top: 0;
   margin-bottom: 15px;
@@ -360,13 +368,15 @@ body {
 }
 
 /* ==========================================================================
-   ÁREA DO JOGO E TABULEIROS (GRID DINÂMICA)
+   ÁREA DO JOGO E TABULEIROS (GRID DINÂMICA CENTRALIZADA)
    ========================================================================== */
+/* MODIFICADO: Agora flex cresce de forma dinâmica ocupando o meio da página */
 .game-container { 
-  flex: 2; 
+  flex: 1; 
   display: flex; 
   flex-direction: column; 
-  align-items: center; 
+  align-items: center;
+  justify-content: center;
 }
 
 h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px; }
@@ -580,14 +590,11 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 /* ==========================================================================
    ESTILOS RESPONSIVOS PARA CELULAR (MEDIA QUERY)
    ========================================================================== */
-@media (max-width: 768px) {
-  body {
-    align-items: center;
-    padding: 0;
-  }
-
+@media (max-width: 992px) {
+  /* MODIFICADO: Em telas médias/pequenas, quebra as 3 colunas em ordem vertical fluida */
   .main-layout {
     flex-direction: column;
+    align-items: center;
     gap: 20px;
     padding: 10px;
   }
@@ -599,6 +606,7 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
     align-self: center;
     gap: 15px;
     padding: 15px;
+    flex: none;
   }
 
   .profile-section {
@@ -611,12 +619,13 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
   }
 
   .ranking-section {
-    max-height: 150px;
+    max-height: 250px;
     overflow-y: auto;
   }
 
   .game-container {
     width: 100%;
+    order: -1; /* Força o jogo a ficar no topo em telas menores se preferir, ou remova para seguir o fluxo */
   }
 
   h1 {
@@ -666,6 +675,7 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
     border-radius: 3px;
   }
 }
+
 .item-locked {
   filter: grayscale(100%) brightness(40%);
   cursor: not-allowed !important;

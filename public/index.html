@@ -13,7 +13,8 @@
   </div>
 
   <div class="main-layout">
-    <div class="side-panel">
+    
+    <div class="side-panel left-panel">
       <div class="profile-section">
         <button onclick="logout()" class="btn-logout-top" title="Sair da Conta">✕ Sair</button>
 
@@ -53,11 +54,6 @@
         
         <button onclick="openAchievementsModal()" class="btn-achievements">Conquistas</button>
       </div>
-
-      <div class="ranking-section">
-        <h2>Top 10 Ranking</h2>
-        <ol id="ranking-list"></ol>
-      </div>
     </div>
 
     <div class="game-container">
@@ -66,6 +62,14 @@
       <p id="status"></p>
       <div id="keyboard" class="keyboard-container"></div>
     </div>
+
+    <div class="side-panel right-panel">
+      <div class="ranking-section">
+        <h2>Top 10 Ranking</h2>
+        <ol id="ranking-list"></ol>
+      </div>
+    </div>
+
   </div>
 
   <div id="cosmetics-modal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeCosmeticsModal();">

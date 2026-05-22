@@ -24,6 +24,7 @@ let currentUser = JSON.parse(localStorage.getItem("user"));
 // ==========================================================================
 // BLOCO: MAPEAMENTO DE ARQUIVOS FÍSICOS (AVATARES E BORDAS)
 // ==========================================================================
+// CORREÇÃO: "Bunny" adicionado! IMPORTANTE: Converta ou salve sua imagem como Bunny.jpg na pasta!
 const listaAvataresReais = ["Dino", "Dog", "Freddy", "Gator", "Gengar", "Giraffe", "Monkey", "Shrimp", "Bunny"];
 
 const listaBordasReais = [
@@ -34,6 +35,7 @@ const listaBordasReais = [
   { id: "gold-border", nome: "Borda Ouro" },
   { id: "platinum-border", nome: "Borda Platina" },
   { id: "diamond-border", nome: "Borda Diamante" },
+  { id: "ascendant-border", nome: "Borda Ascendente" }, 
   { id: "imortal-1-border", nome: "Borda Imortal I" },
   { id: "imortal-2-border", nome: "Borda Imortal II" },
   { id: "imortal-3-border", nome: "Borda Imortal III" },
@@ -59,7 +61,6 @@ function obterElo(pontos) {
   return "Radiante";
 }
 
-// CORRIGIDO: Garante que "Ascendente" puxe "ascendant.png" corretamente sem quebrar
 function formatarNomeImg(nomeElo) {
   let nome = nomeElo.toLowerCase().trim();
   if (nome === "ferro") return "iron";
@@ -78,14 +79,20 @@ function formatarNomeImg(nomeElo) {
 
 
 // ==========================================================================
-// BLOCO: LOJA / MENU DE COSMÉTICOS (ALTERAR AVATAR E BORDA)
+// BLOCO: NOVO POP-UP INTERATIVO DE COSMÉTICOS (LOJA / MODAL)
 // ==========================================================================
-function toggleCosmeticsMenu() {
-  const menu = document.getElementById("cosmetics-dropdown");
-  if(menu) menu.style.display = menu.style.display === "none" ? "block" : "none";
+function openCosmeticsModal() {
+  const modal = document.getElementById("cosmetics-modal");
+  if (!modal) return;
+  modal.style.display = "flex"; // Abre o pop-up centralizado
+  renderCosmeticsGrid();        // Renderiza itens atualizados
 }
 
-// Controla a troca de abas (Avatares vs Bordas)
+function closeCosmeticsModal() {
+  const modal = document.getElementById("cosmetics-modal");
+  if (modal) modal.style.display = "none";
+}
+
 function switchCosmeticsTab(tabId) {
   document.querySelectorAll(".cosmetics-panel").forEach(p => p.style.display = "none");
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -95,7 +102,6 @@ function switchCosmeticsTab(tabId) {
   if(tabId === 'tab-borders') document.getElementById("btn-tab-borders").classList.add("active");
 }
 
-// Renderiza visualmente as opções de cosméticos disponíveis
 function renderCosmeticsGrid() {
   const gridAvatars = document.getElementById("grid-avatars");
   const gridBorders = document.getElementById("grid-borders");
@@ -103,21 +109,40 @@ function renderCosmeticsGrid() {
 
   const avatarAtual = typeof currentUser.avatar === "string" ? currentUser.avatar : "Dino";
   const bordaAtual = currentUser.border || "default";
+  const pointsJogador = Number(currentUser.points) || 0;
 
-  // Renderizar fotos de avatar (.jpg)
+  // 1. Renderizar fotos de avatar (.jpg)
   gridAvatars.innerHTML = "";
   listaAvataresReais.forEach(nomeAv => {
     const img = document.createElement("img");
-    img.src = `assets/avatars/${nomeAv}.jpg`;
+    img.src = `assets/avatars/${nomeAv}.jpg`; // Renderiza como .jpg no sistema principal
     img.className = `item-select-preview ${avatarAtual === nomeAv ? 'selected' : ''}`;
     img.title = nomeAv;
     img.onclick = () => selecionarAvatar(nomeAv);
     gridAvatars.appendChild(img);
   });
 
-  // Renderizar fotos de bordas (.png)
+  const requisitosBordas = {
+    "default": 0,
+    "iron-border": 0,          
+    "bronze-border": 10000,    
+    "silver-border": 50000,    
+    "gold-border": 150000,     
+    "platinum-border": 500000,
+    "diamond-border": 1500000,
+    "ascendant-border": 3000000, 
+    "imortal-1-border": 5000000,
+    "imortal-2-border": 7000000,
+    "imortal-3-border": 9000000,
+    "Radiant-border": 12000000
+  };
+
+  // 2. Renderizar fotos de bordas (.png) com trava estilo Valorant
   gridBorders.innerHTML = "";
   listaBordasReais.forEach(borda => {
+    const pontosNecessarios = requisitosBordas[borda.id] || 0;
+    const estaBloqueada = pointsJogador < pontosNecessarios;
+
     if (borda.id === "default") {
       const div = document.createElement("div");
       div.className = `item-select-preview ${bordaAtual === "default" ? 'selected' : ''}`;
@@ -129,42 +154,58 @@ function renderCosmeticsGrid() {
       div.onclick = () => selecionarBorda("default");
       gridBorders.appendChild(div);
     } else {
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "relative";
+      wrapper.style.display = "inline-block";
+
       const img = document.createElement("img");
       img.src = `assets/borders/${borda.id}.png`;
       img.className = `item-select-preview ${bordaAtual === staticIdBorda(borda.id) ? 'selected' : ''}`;
-      img.title = StaticNomeBorda(borda.id);
-      img.onclick = () => selecionarBorda(borda.id);
-      gridBorders.appendChild(img);
+      
+      if (estaBloqueada) {
+        img.classList.add("item-locked"); 
+        img.title = `${borda.nome} (Bloqueada - Requer Elo Correspondente)`;
+        
+        const lockIcon = document.createElement("div");
+        lockIcon.innerText = "🔒";
+        lockIcon.style.position = "absolute";
+        lockIcon.style.top = "50%";
+        lockIcon.style.left = "50%";
+        lockIcon.style.transform = "translate(-50%, -50%)";
+        lockIcon.style.fontSize = "16px";
+        lockIcon.style.pointerEvents = "none"; 
+        
+        wrapper.appendChild(img);
+        wrapper.appendChild(lockIcon);
+      } else {
+        img.title = borda.nome;
+        img.onclick = () => selecionarBorda(borda.id);
+        wrapper.appendChild(img);
+      }
+      gridBorders.appendChild(wrapper);
     }
   });
 
   function staticIdBorda(id) { return id === "Radiant-border" ? "Radiant-border" : id; }
-  function StaticNomeBorda(id) { return id; }
 }
 
-async function selecionarAvatar(nomeAvatar) {
+function selecionarAvatar(nomeAvatar) {
   if (!currentUser) return;
   currentUser.avatar = nomeAvatar;
   localStorage.setItem("user", JSON.stringify(currentUser));
-  
-  updatePointsDisplay();
-  renderCosmeticsGrid();
-  await salvarCosmeticosNoServidor();
-  await loadRanking(); 
+  renderCosmeticsGrid(); // Atualiza a seleção visual na hora na grade
 }
 
-async function selecionarBorda(idBorda) {
+function selecionarBorda(idBorda) {
   if (!currentUser) return;
   currentUser.border = idBorda;
   localStorage.setItem("user", JSON.stringify(currentUser));
-  
-  updatePointsDisplay();
-  renderCosmeticsGrid();
-  await salvarCosmeticosNoServidor();
-  await loadRanking(); 
+  renderCosmeticsGrid(); // Atualiza a seleção visual na hora na grade
 }
 
-async function salvarCosmeticosNoServidor() {
+// NOVA FUNÇÃO: Disparada pelo botão Salvar. Sincroniza tudo com o servidor e dá F5 limpo!
+async function salvarEAtualizarPagina() {
+  if (!currentUser) return;
   try {
     await fetch("/update-cosmetics", {
       method: "POST",
@@ -175,8 +216,12 @@ async function salvarCosmeticosNoServidor() {
         border: currentUser.border || "default"
       })
     });
+    // Força o reload da página após sincronizar com o banco de dados
+    window.location.reload();
   } catch (err) {
     console.error("Erro ao sincronizar cosméticos com o banco:", err);
+    // Mesmo se der algum erro de rede leve, recarrega para não travar o cliente
+    window.location.reload();
   }
 }
 
@@ -195,7 +240,6 @@ function checkUserSession() {
   }
   
   updatePointsDisplay();
-  renderCosmeticsGrid();
 
   if (currentUser.theme) {
     changeTheme(currentUser.theme, false);
@@ -220,8 +264,7 @@ async function syncUserWithServer() {
     });
     
     if (response.ok) {
-      const data = await response.json();
-      console.log("Sincronização realizada com sucesso:", data.message);
+      console.log("Sincronização realizada com sucesso.");
     }
   } catch (err) {
     console.error("Erro ao sincronizar sessão com o ranking:", err);
@@ -247,13 +290,11 @@ function updatePointsDisplay() {
     pointsEl.innerHTML = `${pts.toLocaleString()} pts <br><span class="elo-tag elo-${formatarNomeImg(eloAtual)}" style="font-weight:bold; font-size:13px; color: #ff4655;">Elo: ${eloAtual}</span>`;
   }
 
-  // Atualiza Foto Circular (.jpg)
   if (avatarImgEl) {
     const avatarSalvo = typeof currentUser.avatar === "string" ? currentUser.avatar : "Dino";
     avatarImgEl.src = `assets/avatars/${avatarSalvo}.jpg`;
   }
 
-  // Atualiza Borda Sobreposta (.png)
   if (borderImgEl) {
     const borda = currentUser.border || "default";
     if (borda === "default") {
@@ -264,7 +305,6 @@ function updatePointsDisplay() {
     }
   }
 
-  // Mini Ícone do Elo (.png)
   if (eloIconEl) {
     eloIconEl.src = `assets/elos/${formatarNomeImg(eloAtual)}.png`;
     eloIconEl.alt = `Elo ${eloAtual}`;

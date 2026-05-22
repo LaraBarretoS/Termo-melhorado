@@ -33,7 +33,7 @@ const listaBordasReais = [
   { id: "imortal-1-border", nome: "Borda Imortal I" },
   { id: "imortal-2-border", nome: "Borda Imortal II" },
   { id: "imortal-3-border", nome: "Borda Imortal III" },
-  { id: "Radiant-border", nome: "Borda Radiante" } // Mantido R maiúsculo conforme seu print
+  { id: "Radiant-border", nome: "Borda Radiante" } 
 ];
 
 /* ==========================================================================
@@ -85,7 +85,6 @@ function renderCosmeticsGrid() {
   const gridBorders = document.getElementById("grid-borders");
   if (!gridAvatars || !gridBorders || !currentUser) return;
 
-  // Garante valores padrão limpos caso o banco traga nulo ou o formato antigo numérico
   const avatarAtual = typeof currentUser.avatar === "string" ? currentUser.avatar : "Dino";
   const bordaAtual = currentUser.border || "default";
 
@@ -210,7 +209,7 @@ function updatePointsDisplay() {
   let pts = Number(currentUser.points) || 0;
   
   const pointsEl = document.getElementById("profile-points");
-  const eloIconEl = document.getElementById("profile-elo-icon");
+  const eloIconEl = document.getElementById("profile-elo-icon"); // Captura corrigida via ID do HTML
   const avatarImgEl = document.getElementById("profile-avatar-img");
   const borderImgEl = document.getElementById("profile-border-img");
   
@@ -220,13 +219,13 @@ function updatePointsDisplay() {
     pointsEl.innerHTML = `${pts.toLocaleString()} pts <br><span class="elo-tag elo-${formatarNomeImg(eloAtual)}" style="font-weight:bold; font-size:13px; color: #ff4655;">Elo: ${eloAtual}</span>`;
   }
 
-  // Atualiza Foto Circular (.jpg de acordo com seu print)
+  // Atualiza Foto Circular (.jpg)
   if (avatarImgEl) {
     const avatarSalvo = typeof currentUser.avatar === "string" ? currentUser.avatar : "Dino";
     avatarImgEl.src = `assets/avatars/${avatarSalvo}.jpg`;
   }
 
-  // Atualiza Borda Sobreposta (.png de acordo com seu print)
+  // Atualiza Borda Sobreposta (.png)
   if (borderImgEl) {
     const borda = currentUser.border || "default";
     if (borda === "default") {
@@ -237,11 +236,11 @@ function updatePointsDisplay() {
     }
   }
 
-  // Mini Ícone do Elo (.png de acordo com seu print)
+  // Mini Ícone do Elo (.png) - Correção da exibição
   if (eloIconEl) {
     eloIconEl.src = `assets/elos/${formatarNomeImg(eloAtual)}.png`;
     eloIconEl.alt = `Elo ${eloAtual}`;
-    eloIconEl.style.display = "block";
+    eloIconEl.style.display = "block"; // Força a renderização
   }
 }
 
@@ -296,7 +295,6 @@ async function loadRanking() {
         const borderSrc = hasBorder ? `src="assets/borders/${player.border}.png"` : '';
         const borderStyle = hasBorder ? 'display:block;' : 'display:none;';
         
-        // Trata compatibilidade caso o player no banco ainda tenha o avatar antigo do tipo número
         const playerAvatarFile = typeof player.avatar === "string" ? player.avatar : "Dino";
 
         itemLi.innerHTML = `
@@ -313,7 +311,7 @@ async function loadRanking() {
               <span style="font-size:12px; opacity:0.8;">${(player.points || 0).toLocaleString()} pts</span>
             </div>
           </div>
-          <img src="assets/elos/${formatarNomeImg(playerElo)}.png" alt="${playerElo}" class="ranking-elo-img" onerror="this.style.opacity='0'" style="width: 25px; height: 25px; object-fit: contain;">
+          <img src="assets/elos/${formatarNomeImg(playerElo)}.png" alt="${playerElo}" class="ranking-elo-img" onerror="this.style.opacity='0'" style="width: 28px; height: 28px; object-fit: contain; display: block;">
         `;
         list.appendChild(itemLi);
       });
@@ -576,7 +574,7 @@ function checkWord() {
 
   if (boardsData.every(b => b.solved)) {
     if(statusText) statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts`;
-    saveScore(totalRoundScore);
+    saveScore(totalRoundScore, true); // Envia true sinalizando vitória para avançar o nível
     showEndGameModal(true);
     currentRow = MAX_ROWS;
     return;
@@ -584,7 +582,7 @@ function checkWord() {
 
   if (currentRow === MAX_ROWS) {
     if(statusText) statusText.innerText = `Fim de jogo!`;
-    saveScore(0); 
+    saveScore(0, false); 
     showEndGameModal(false);
     return;
   }
@@ -601,9 +599,9 @@ function checkWord() {
 }
 
 /* ==========================================================================
-   SALVA O SCORE NO BANCO E ATUALIZA RELATÓRIOS
+   SALVA O SCORE NO BANCO E AVANÇA O NÍVEL COMPETITIVO AUTOMATICAMENTE
    ========================================================================== */
-async function saveScore(scorePoints) {
+async function saveScore(scorePoints, e_Vitoria) {
   if (!currentUser) return;
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
   let finalCalculatedScore = scorePoints;
@@ -613,6 +611,15 @@ async function saveScore(scorePoints) {
   } else {
     if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 2); 
     if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2.5); 
+  }
+
+  // Se o jogador venceu, passamos para o próximo nível automaticamente
+  if (e_Vitoria) {
+    if (currentLevel < 3) {
+      currentLevel++;
+    } else {
+      currentLevel = 1; // Reseta pro Loop após fechar o Nível 4 tabuleiros
+    }
   }
 
   try {
@@ -666,16 +673,19 @@ function showEndGameModal(isVictory) {
   if (wordsSolvedCount === 0) {
     text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu -15.000 PDL</span>.<br><br>As respostas eram:<br><strong>${targetWords.join(" | ")}</strong>`;
   } else {
-    text.innerHTML = `Você venceu no Nível ${currentLevel} garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!`;
+    text.innerHTML = `Você venceu o desafio garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!<br><br>Aguarde o carregamento do próximo nível.`;
   }
 
   const btnContainer = document.createElement("div");
   btnContainer.className = "modal-buttons";
 
   const btnReset = document.createElement("button");
-  btnReset.innerText = "Fechar e Recarregar";
-  btnReset.className = "m-btn m-btn-reset";
-  btnReset.addEventListener("click", () => window.location.reload());
+  btnReset.innerText = "Avançar Próxima Partida";
+  btnReset.className = "m-btn m-btn-next";
+  btnReset.addEventListener("click", () => {
+    modal.remove();
+    startNewGame(); // Recarrega o grid no novo nível limpo sem dar F5 completo
+  });
   btnContainer.appendChild(btnReset);
 
   modal.appendChild(content);

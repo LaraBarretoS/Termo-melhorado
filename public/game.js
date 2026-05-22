@@ -1,3 +1,6 @@
+// ==========================================================================
+// BLOCO: VARIÁVEIS GLOBAIS E CONFIGURAÇÕES INICIAIS DO JOGO
+// ==========================================================================
 const boardContainer = document.getElementById("board");
 const statusText = document.getElementById("status");
 const keyboardContainer = document.getElementById("keyboard");
@@ -17,9 +20,10 @@ let boardsData = [];
 
 let currentUser = JSON.parse(localStorage.getItem("user"));
 
-/* ==========================================================================
-   MAPEAMENTO DAS SUAS IMAGENS REAIS
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: MAPEAMENTO DE ARQUIVOS FÍSICOS (AVATARES E BORDAS)
+// ==========================================================================
 const listaAvataresReais = ["Dino", "Dog", "Freddy", "Gator", "Gengar", "Giraffe", "Monkey", "Shrimp"];
 
 const listaBordasReais = [
@@ -36,9 +40,10 @@ const listaBordasReais = [
   { id: "Radiant-border", nome: "Borda Radiante" } 
 ];
 
-/* ==========================================================================
-   SISTEMA DE RANKED (ELOS UNIFICADOS E CORRIGIDOS)
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: REGRAS DE ELO E PADRONIZAÇÃO DE IMAGENS (SISTEMA RANKED)
+// ==========================================================================
 function obterElo(pontos) {
   const pts = Number(pontos) || 0;
   if (pts < 10000) return "Ferro";
@@ -54,7 +59,7 @@ function obterElo(pontos) {
   return "Radiante";
 }
 
-// Converte os nomes dos Elos para bater exatamente com seus arquivos png físicos
+// CORRIGIDO: Garante que "Ascendente" puxe "ascendant.png" corretamente sem quebrar
 function formatarNomeImg(nomeElo) {
   let nome = nomeElo.toLowerCase().trim();
   if (nome === "ferro") return "iron";
@@ -71,14 +76,16 @@ function formatarNomeImg(nomeElo) {
   return nome;
 }
 
-/* ==========================================================================
-   INTERAÇÃO DO MENU SUPERIOR DE COSMÉTICOS (ABAS E SELEÇÃO)
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: LOJA / MENU DE COSMÉTICOS (ALTERAR AVATAR E BORDA)
+// ==========================================================================
 function toggleCosmeticsMenu() {
   const menu = document.getElementById("cosmetics-dropdown");
   if(menu) menu.style.display = menu.style.display === "none" ? "block" : "none";
 }
 
+// Controla a troca de abas (Avatares vs Bordas)
 function switchCosmeticsTab(tabId) {
   document.querySelectorAll(".cosmetics-panel").forEach(p => p.style.display = "none");
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -88,7 +95,7 @@ function switchCosmeticsTab(tabId) {
   if(tabId === 'tab-borders') document.getElementById("btn-tab-borders").classList.add("active");
 }
 
-// Renderiza dinamicamente as opções dentro do dropdown de cosméticos
+// Renderiza visualmente as opções de cosméticos disponíveis
 function renderCosmeticsGrid() {
   const gridAvatars = document.getElementById("grid-avatars");
   const gridBorders = document.getElementById("grid-borders");
@@ -97,7 +104,7 @@ function renderCosmeticsGrid() {
   const avatarAtual = typeof currentUser.avatar === "string" ? currentUser.avatar : "Dino";
   const bordaAtual = currentUser.border || "default";
 
-  // 1. Renderizar fotos (.jpg)
+  // Renderizar fotos de avatar (.jpg)
   gridAvatars.innerHTML = "";
   listaAvataresReais.forEach(nomeAv => {
     const img = document.createElement("img");
@@ -108,7 +115,7 @@ function renderCosmeticsGrid() {
     gridAvatars.appendChild(img);
   });
 
-  // 2. Renderizar borders (.png)
+  // Renderizar fotos de bordas (.png)
   gridBorders.innerHTML = "";
   listaBordasReais.forEach(borda => {
     if (borda.id === "default") {
@@ -173,9 +180,10 @@ async function salvarCosmeticosNoServidor() {
   }
 }
 
-/* ==========================================================================
-   VERIFICAÇÃO DE LOGIN E PERFIL LOCAL
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: VERIFICAÇÃO DE PERFIL E SINCRONIZAÇÃO DE USUÁRIO
+// ==========================================================================
 function checkUserSession() {
   if (!currentUser) {
     window.location.href = "/login";
@@ -220,6 +228,10 @@ async function syncUserWithServer() {
   }
 }
 
+
+// ==========================================================================
+// BLOCO: ATUALIZAÇÃO VISUAL DA INTERFACE DO PERFIL (PONTOS, ELO, FOTO, BORDA)
+// ==========================================================================
 function updatePointsDisplay() {
   if (!currentUser) return;
   let pts = Number(currentUser.points) || 0;
@@ -263,9 +275,10 @@ function updatePointsDisplay() {
   }
 }
 
-/* ==========================================================================
-   CONTROLE DE TEMAS
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: ALTERAÇÃO VISUAL DE TEMAS
+// ==========================================================================
 async function changeTheme(themeName, sendToServer = true) {
   const body = document.getElementById("game-body");
   if (body) {
@@ -291,9 +304,10 @@ async function changeTheme(themeName, sendToServer = true) {
   }
 }
 
-/* ==========================================================================
-   RANKING GERAL CORRIGIDO (SINCRONIZAÇÃO EM TEMPO REAL)
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: BUSCA E RENDERIZAÇÃO DO RANKING GERAL (SINCRONIZADO)
+// ==========================================================================
 async function loadRanking() {
   try {
     const response = await fetch(`/ranking`);
@@ -309,10 +323,8 @@ async function loadRanking() {
         const itemLi = document.createElement("li");
         itemLi.classList.add("ranking-item");
         
-        // Calcula o elo estritamente igual à regra unificada do perfil
         const playerElo = obterElo(player.points || 0);
         
-        // CORREÇÃO DE SEGURANÇA: Se for a linha do jogador local, força o uso dos dados em cache
         let playerAvatarFile = "Dino";
         let playerBorderFile = "default";
 
@@ -352,9 +364,10 @@ async function loadRanking() {
   }
 }
 
-/* ==========================================================================
-   TECLADO VIRTUAL
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: TECLADO VIRTUAL DO JOGO
+// ==========================================================================
 const keyboardRows = [
   ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
   ["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ç"],
@@ -390,9 +403,10 @@ function updateKeyboardColors(letter, status) {
   btn.classList.add(status);
 }
 
-/* ==========================================================================
-   SISTEMA DE DIGITAÇÃO E SELEÇÃO DE CAIXA
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: ENTRADA DE DADOS E EVENTOS DE DIGITAÇÃO (MOUSEDOWN / KEYDOWN)
+// ==========================================================================
 function selectTile(colIndex) {
   if (currentRow >= MAX_ROWS) return;
   currentCol = colIndex;
@@ -473,9 +487,10 @@ function updateTile(boardIndex, row, col, letter) {
   if (tile) tile.textContent = letter;
 }
 
-/* ==========================================================================
-   GERENCIAMENTO DE NÍVEIS
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: GERENCIAMENTO DE NÍVEIS (1 QUADRO, 2 QUADROS OU 4 QUADROS)
+// ==========================================================================
 async function startNewGame() {
   currentRow = 0;
   currentCol = 0;
@@ -539,9 +554,10 @@ async function startNewGame() {
   renderActiveTileIndicator();
 }
 
-/* ==========================================================================
-   VALIDAÇÃO DA TENTATIVA
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: VERIFICAÇÃO E VALIDAÇÃO DAS LETRAS (CORRETO, QUASE, INCORRETO)
+// ==========================================================================
 function checkWord() {
   document.querySelectorAll(".tile").forEach(t => t.classList.remove("active-tile"));
   document.querySelectorAll(".row-active").forEach(r => r.classList.remove("row-active"));
@@ -629,9 +645,10 @@ function checkWord() {
   renderActiveTileIndicator();
 }
 
-/* ==========================================================================
-   SALVA O SCORE NO BANCO E AVANÇA O NÍVEL COMPETITIVO AUTOMATICAMENTE
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: SALVAR PONTUAÇÃO (BANCO DE DADOS / LOCALSTORAGE)
+// ==========================================================================
 async function saveScore(scorePoints, e_Vitoria) {
   if (!currentUser) return;
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
@@ -674,9 +691,10 @@ async function saveScore(scorePoints, e_Vitoria) {
   }
 }
 
-/* ==========================================================================
-   POPUPS DO FIM DE JOGO
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: INTERFACE DE TELA DE VITÓRIA OU DERROTA (MODAL OVERLAY)
+// ==========================================================================
 function showEndGameModal(isVictory) {
   const oldModal = document.getElementById("custom-modal");
   if (oldModal) oldModal.remove();
@@ -730,9 +748,10 @@ function logout() {
   window.location.href = "/login";
 }
 
-/* ==========================================================================
-   SISTEMA INTERATIVO DO MODAL DE CONQUISTAS (CORRIGIDO E SINCRONIZADO)
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: SISTEMA INTERATIVO DE CONQUISTAS (ACHIEVEMENTS MODAL)
+// ==========================================================================
 function openAchievementsModal() {
   const modal = document.getElementById("achievements-modal");
   if (!modal) return;
@@ -740,7 +759,6 @@ function openAchievementsModal() {
   
   const pts = Number(currentUser.points) || 0;
   
-  // Sincronizado estritamente com os limites reais da função obterElo
   const elosConfig = [
     { id: "ach-ferro", min: 0 }, 
     { id: "ach-bronze", min: 10000 }, 
@@ -776,9 +794,10 @@ function closeAchievementsModal() {
   if (modal) modal.style.display = "none";
 }
 
-/* ==========================================================================
-   INICIALIZAÇÃO DO JOGO
-   ========================================================================== */
+
+// ==========================================================================
+// BLOCO: INICIALIZAÇÃO DA SESSÃO AO CARREGAR A PÁGINA
+// ==========================================================================
 async function init() {
   checkUserSession();
   await syncUserWithServer(); 

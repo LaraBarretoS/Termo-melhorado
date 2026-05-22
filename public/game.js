@@ -113,7 +113,6 @@ function renderCosmeticsGrid() {
   listaAvataresReais.forEach(nomeAv => {
     const img = document.createElement("img");
     
-    // CORREÇÃO: Identifica a extensão correta baseada no arquivo físico do avatar
     const extensao = nomeAv === "Bunny" ? "png" : "jpg";
     img.src = `assets/avatars/${nomeAv}.${extensao}`; 
     
@@ -160,7 +159,7 @@ function renderCosmeticsGrid() {
 
       const img = document.createElement("img");
       img.src = `assets/borders/${borda.id}.png`;
-      img.className = `item-select-preview ${bordaAtual === staticIdBorda(borda.id) ? 'selected' : ''}`;
+      img.className = `item-select-preview ${bordaAtual === borda.id ? 'selected' : ''}`;
       
       if (estaBloqueada) {
         img.classList.add("item-locked"); 
@@ -185,8 +184,6 @@ function renderCosmeticsGrid() {
       gridBorders.appendChild(wrapper);
     }
   });
-
-  function staticIdBorda(id) { return id === "Radiant-border" ? "Radiant-border" : id; }
 }
 
 function selecionarAvatar(nomeAvatar) {
@@ -289,7 +286,6 @@ function updatePointsDisplay() {
 
   if (avatarImgEl) {
     const avatarSalvo = typeof currentUser.avatar === "string" ? currentUser.avatar : "Dino";
-    // CORREÇÃO: Garante que o Bunny carregue como PNG no display superior do perfil
     const extensao = avatarSalvo === "Bunny" ? "png" : "jpg";
     avatarImgEl.src = `assets/avatars/${avatarSalvo}.${extensao}`;
   }
@@ -379,7 +375,6 @@ async function loadRanking() {
         const borderSrc = hasBorder ? `src="assets/borders/${playerBorderFile}.png"` : '';
         const borderStyle = hasBorder ? 'display:block;' : 'display:none;';
 
-        // CORREÇÃO: Garante que o Bunny use a extensão correta na lista do ranking global
         const extensaoAvatar = playerAvatarFile === "Bunny" ? "png" : "jpg";
 
         itemLi.innerHTML = `
@@ -588,9 +583,9 @@ async function startNewGame() {
           });
           rowEl.appendChild(tile);
         }
-        boardEl.appendChild(rowEl);
+        boardEl.appendChild(rowEl); // CORRIGIDO: Agora anexa as linhas corretamente ao elemento pai do tabuleiro
       }
-      boardEl.appendChild(rowEl);
+      boardContainer.appendChild(boardEl);
     }
   }
   createKeyboard();

@@ -24,7 +24,6 @@ let currentUser = JSON.parse(localStorage.getItem("user"));
 // ==========================================================================
 // BLOCO: MAPEAMENTO DE ARQUIVOS FÍSICOS (AVATARES E BORDAS)
 // ==========================================================================
-// CORREÇÃO: "Bunny" adicionado! IMPORTANTE: Converta ou salve sua imagem como Bunny.jpg na pasta!
 const listaAvataresReais = ["Dino", "Dog", "Freddy", "Gator", "Gengar", "Giraffe", "Monkey", "Shrimp", "Bunny"];
 
 const listaBordasReais = [
@@ -84,8 +83,8 @@ function formatarNomeImg(nomeElo) {
 function openCosmeticsModal() {
   const modal = document.getElementById("cosmetics-modal");
   if (!modal) return;
-  modal.style.display = "flex"; // Abre o pop-up centralizado
-  renderCosmeticsGrid();        // Renderiza itens atualizados
+  modal.style.display = "flex"; 
+  renderCosmeticsGrid();        
 }
 
 function closeCosmeticsModal() {
@@ -111,11 +110,10 @@ function renderCosmeticsGrid() {
   const bordaAtual = currentUser.border || "default";
   const pointsJogador = Number(currentUser.points) || 0;
 
-  // 1. Renderizar fotos de avatar (.jpg)
   gridAvatars.innerHTML = "";
   listaAvataresReais.forEach(nomeAv => {
     const img = document.createElement("img");
-    img.src = `assets/avatars/${nomeAv}.jpg`; // Renderiza como .jpg no sistema principal
+    img.src = `assets/avatars/${nomeAv}.jpg`; 
     img.className = `item-select-preview ${avatarAtual === nomeAv ? 'selected' : ''}`;
     img.title = nomeAv;
     img.onclick = () => selecionarAvatar(nomeAv);
@@ -137,7 +135,6 @@ function renderCosmeticsGrid() {
     "Radiant-border": 12000000
   };
 
-  // 2. Renderizar fotos de bordas (.png) com trava estilo Valorant
   gridBorders.innerHTML = "";
   listaBordasReais.forEach(borda => {
     const pontosNecessarios = requisitosBordas[borda.id] || 0;
@@ -193,17 +190,16 @@ function selecionarAvatar(nomeAvatar) {
   if (!currentUser) return;
   currentUser.avatar = nomeAvatar;
   localStorage.setItem("user", JSON.stringify(currentUser));
-  renderCosmeticsGrid(); // Atualiza a seleção visual na hora na grade
+  renderCosmeticsGrid(); 
 }
 
 function selecionarBorda(idBorda) {
   if (!currentUser) return;
   currentUser.border = idBorda;
   localStorage.setItem("user", JSON.stringify(currentUser));
-  renderCosmeticsGrid(); // Atualiza a seleção visual na hora na grade
+  renderCosmeticsGrid(); 
 }
 
-// NOVA FUNÇÃO: Disparada pelo botão Salvar. Sincroniza tudo com o servidor e dá F5 limpo!
 async function salvarEAtualizarPagina() {
   if (!currentUser) return;
   try {
@@ -216,11 +212,9 @@ async function salvarEAtualizarPagina() {
         border: currentUser.border || "default"
       })
     });
-    // Força o reload da página após sincronizar com o banco de dados
     window.location.reload();
   } catch (err) {
     console.error("Erro ao sincronizar cosméticos com o banco:", err);
-    // Mesmo se der algum erro de rede leve, recarrega para não travar o cliente
     window.location.reload();
   }
 }
@@ -667,8 +661,11 @@ function checkWord() {
     return;
   }
 
+  // CORREÇÃO: Exibe a(s) palavra(s) correta(s) também no texto de status caso acabe os palpites
   if (currentRow === MAX_ROWS) {
-    if(statusText) statusText.innerText = `Fim de jogo!`;
+    if(statusText) {
+      statusText.innerText = `Fim de jogo! Resposta: ${targetWords.join(" | ")}`;
+    }
     saveScore(0, false); 
     showEndGameModal(false);
     return;

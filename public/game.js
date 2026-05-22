@@ -108,7 +108,7 @@ function renderCosmeticsGrid() {
     gridAvatars.appendChild(img);
   });
 
-  // 2. Renderizar bordas (.png)
+  // 2. Renderizar borders (.png)
   gridBorders.innerHTML = "";
   listaBordasReais.forEach(borda => {
     if (borda.id === "default") {
@@ -731,7 +731,7 @@ function logout() {
 }
 
 /* ==========================================================================
-   SISTEMA INTERATIVO DO MODAL DE CONQUISTAS
+   SISTEMA INTERATIVO DO MODAL DE CONQUISTAS (CORRIGIDO E SINCRONIZADO)
    ========================================================================== */
 function openAchievementsModal() {
   const modal = document.getElementById("achievements-modal");
@@ -739,11 +739,20 @@ function openAchievementsModal() {
   modal.style.display = "flex";
   
   const pts = Number(currentUser.points) || 0;
+  
+  // Sincronizado estritamente com os limites reais da função obterElo
   const elosConfig = [
-    { id: "ach-ferro", min: 0 }, { id: "ach-bronze", min: 10000 }, { id: "ach-prata", min: 50000 },
-    { id: "ach-ouro", min: 150000 }, { id: "ach-platina", min: 500000 }, { id: "ach-diamante", min: 1500000 },
-    { id: "ach-ascendente", min: 3000000 }, { id: "ach-imortal1", min: 5000000 }, { id: "ach-imortal2", min: 7000000 },
-    { id: "ach-imortal3", min: 9000000 }, { id: "ach-radiante", min: 12000000 }
+    { id: "ach-ferro", min: 0 }, 
+    { id: "ach-bronze", min: 10000 }, 
+    { id: "ach-prata", min: 50000 },
+    { id: "ach-ouro", min: 150000 }, 
+    { id: "ach-platina", min: 500000 }, 
+    { id: "ach-diamante", min: 1500000 }, 
+    { id: "ach-ascendente", min: 3000000 }, 
+    { id: "ach-imortal1", min: 5000000 }, 
+    { id: "ach-imortal2", min: 7000000 },
+    { id: "ach-imortal3", min: 9000000 }, 
+    { id: "ach-radiante", min: 12000000 }
   ];
 
   elosConfig.forEach(elo => {
@@ -751,10 +760,12 @@ function openAchievementsModal() {
     if (card) {
       if (pts >= elo.min) {
         card.classList.add("unlocked");
-        card.querySelector(".ach-status").textContent = "✅";
+        const statusEl = card.querySelector(".ach-status");
+        if (statusEl) statusEl.textContent = "✅";
       } else {
         card.classList.remove("unlocked");
-        card.querySelector(".ach-status").textContent = "🔒";
+        const statusEl = card.querySelector(".ach-status");
+        if (statusEl) statusEl.textContent = "🔒";
       }
     }
   });

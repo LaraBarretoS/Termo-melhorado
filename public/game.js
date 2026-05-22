@@ -112,7 +112,11 @@ function renderCosmeticsGrid() {
   gridAvatars.innerHTML = "";
   listaAvataresReais.forEach(nomeAv => {
     const img = document.createElement("img");
-    img.src = `assets/avatars/${nomeAv}.jpg`; 
+    
+    // CORREÇÃO: Identifica a extensão correta baseada no arquivo físico do avatar
+    const extensao = nomeAv === "Bunny" ? "png" : "jpg";
+    img.src = `assets/avatars/${nomeAv}.${extensao}`; 
+    
     img.className = `item-select-preview ${avatarAtual === nomeAv ? 'selected' : ''}`;
     img.title = nomeAv;
     img.onclick = () => selecionarAvatar(nomeAv);
@@ -285,7 +289,9 @@ function updatePointsDisplay() {
 
   if (avatarImgEl) {
     const avatarSalvo = typeof currentUser.avatar === "string" ? currentUser.avatar : "Dino";
-    avatarImgEl.src = `assets/avatars/${avatarSalvo}.jpg`;
+    // CORREÇÃO: Garante que o Bunny carregue como PNG no display superior do perfil
+    const extensao = avatarSalvo === "Bunny" ? "png" : "jpg";
+    avatarImgEl.src = `assets/avatars/${avatarSalvo}.${extensao}`;
   }
 
   if (borderImgEl) {
@@ -373,12 +379,15 @@ async function loadRanking() {
         const borderSrc = hasBorder ? `src="assets/borders/${playerBorderFile}.png"` : '';
         const borderStyle = hasBorder ? 'display:block;' : 'display:none;';
 
+        // CORREÇÃO: Garante que o Bunny use a extensão correta na lista do ranking global
+        const extensaoAvatar = playerAvatarFile === "Bunny" ? "png" : "jpg";
+
         itemLi.innerHTML = `
           <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-weight:bold; width:20px; text-align: left;">${index + 1}°</span>
             
             <div class="ranking-avatar-wrapper">
-              <img src="assets/avatars/${playerAvatarFile}.jpg" class="ranking-avatar-img" onerror="this.src='assets/avatars/Dino.jpg'">
+              <img src="assets/avatars/${playerAvatarFile}.${extensaoAvatar}" class="ranking-avatar-img" onerror="this.src='assets/avatars/Dino.jpg'">
               <img ${borderSrc} class="ranking-border-overlay" style="${borderStyle}">
             </div>
 
@@ -533,7 +542,6 @@ async function startNewGame() {
   boardsData = [];
   if(statusText) statusText.innerText = "";
   
-  // CORREÇÃO DA TRAVA DE NÍVEL: Força a atualização do modo visual baseado no nível correto atualizado
   if (currentLevel === 1) currentMode = 1;
   else if (currentLevel === 2) currentMode = 2;
   else if (currentLevel === 3) currentMode = 4;
@@ -582,7 +590,7 @@ async function startNewGame() {
         }
         boardEl.appendChild(rowEl);
       }
-      boardContainer.appendChild(boardEl);
+      boardEl.appendChild(rowEl);
     }
   }
   createKeyboard();
@@ -698,7 +706,6 @@ async function saveScore(scorePoints, e_Vitoria) {
     if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2.5); 
   }
 
-  // CORREÇÃO DO AVANÇO DE NÍVEL: Reseta para o nível 1 perfeitamente se passar do nível 3
   if (e_Vitoria) {
     if (currentLevel < 3) {
       currentLevel++;
@@ -706,7 +713,6 @@ async function saveScore(scorePoints, e_Vitoria) {
       currentLevel = 1; 
     }
   } else {
-    // Se perder, opcionalmente você pode resetar o jogador para o nível 1
     currentLevel = 1;
   }
 

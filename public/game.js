@@ -33,7 +33,6 @@ const listaBordasReais = [
   { id: "silver-border", nome: "Borda Prata" },
   { id: "gold-border", nome: "Borda Ouro" },
   { id: "platinum-border", nome: "Borda Platina" },
-  { id: "diamond-border", nome: "Borda Diamante" },
   { id: "ascendant-border", nome: "Borda Ascendente" }, 
   { id: "imortal-1-border", nome: "Borda Imortal I" },
   { id: "imortal-2-border", nome: "Borda Imortal II" },
@@ -534,9 +533,11 @@ async function startNewGame() {
   boardsData = [];
   if(statusText) statusText.innerText = "";
   
+  // CORREÇÃO DA TRAVA DE NÍVEL: Força a atualização do modo visual baseado no nível correto atualizado
   if (currentLevel === 1) currentMode = 1;
-  if (currentLevel === 2) currentMode = 2;
-  if (currentLevel === 3) currentMode = 4;
+  else if (currentLevel === 2) currentMode = 2;
+  else if (currentLevel === 3) currentMode = 4;
+  else { currentLevel = 1; currentMode = 1; }
 
   if(boardContainer) {
     boardContainer.innerHTML = "";
@@ -661,7 +662,6 @@ function checkWord() {
     return;
   }
 
-  // CORREÇÃO: Exibe a(s) palavra(s) correta(s) também no texto de status caso acabe os palpites
   if (currentRow === MAX_ROWS) {
     if(statusText) {
       statusText.innerText = `Fim de jogo! Resposta: ${targetWords.join(" | ")}`;
@@ -698,12 +698,16 @@ async function saveScore(scorePoints, e_Vitoria) {
     if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2.5); 
   }
 
+  // CORREÇÃO DO AVANÇO DE NÍVEL: Reseta para o nível 1 perfeitamente se passar do nível 3
   if (e_Vitoria) {
     if (currentLevel < 3) {
       currentLevel++;
     } else {
       currentLevel = 1; 
     }
+  } else {
+    // Se perder, opcionalmente você pode resetar o jogador para o nível 1
+    currentLevel = 1;
   }
 
   try {

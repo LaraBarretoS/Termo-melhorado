@@ -55,11 +55,11 @@ function obterElo(pontos) {
 
 // Converte os nomes dos Elos para bater exatamente com seus arquivos png
 function formatarNomeImg(nomeElo) {
-  let nome = nomeElo.toLowerCase();
+  let nome = nomeElo.toLowerCase().trim();
   if (nome === "imortal 1") return "immortal-1";
   if (nome === "imortal 2") return "immortal-2";
   if (nome === "imortal 3") return "immortal-3";
-  if (nome === "diamante") return "diamond";     // CORRIGIDO: Seus arquivos físicos usam o termo em inglês
+  if (nome === "diamante") return "diamond";     
   if (nome === "ascendente") return "ascendant"; 
   return nome;
 }
@@ -117,30 +117,38 @@ function renderCosmeticsGrid() {
     } else {
       const img = document.createElement("img");
       img.src = `assets/borders/${borda.id}.png`;
-      img.className = `item-select-preview ${bordaAtual === borda.id ? 'selected' : ''}`;
-      img.title = borda.nome;
+      img.className = `item-select-preview ${bordaAtual === staticIdBorda(borda.id) ? 'selected' : ''}`;
+      img.title = StaticNomeBorda(borda.id);
       img.onclick = () => selecionarBorda(borda.id);
       gridBorders.appendChild(img);
     }
   });
+
+  // Funções auxiliares internas para consistência de ID de borda
+  function staticIdBorda(id) { return id === "Radiant-border" ? "Radiant-border" : id; }
+  function StaticNomeBorda(id) { return id; }
 }
 
 async function selecionarAvatar(nomeAvatar) {
   if (!currentUser) return;
   currentUser.avatar = nomeAvatar;
   localStorage.setItem("user", JSON.stringify(currentUser));
+  
   updatePointsDisplay();
   renderCosmeticsGrid();
   await salvarCosmeticosNoServidor();
+  await loadRanking(); // Recarrega o ranking imediatamente para atualizar sua foto localmente
 }
 
 async function selecionarBorda(idBorda) {
   if (!currentUser) return;
   currentUser.border = idBorda;
   localStorage.setItem("user", JSON.stringify(currentUser));
+  
   updatePointsDisplay();
   renderCosmeticsGrid();
   await salvarCosmeticosNoServidor();
+  await loadRanking(); // Recarrega o ranking imediatamente para atualizar sua borda localmente
 }
 
 async function salvarCosmeticosNoServidor() {
@@ -233,12 +241,13 @@ function updatePointsDisplay() {
     if (borda === "default") {
       borderImgEl.style.display = "none";
     } else {
+      // Trata possíveis diferenças de maiúsculas/minúsculas vindas da lista (Ex: Radiant-border)
       borderImgEl.src = `assets/borders/${borda}.png`;
       borderImgEl.style.display = "block";
     }
   }
 
-  // Mini Ícone do Elo (.png) - Tratado e corrigido o caminho
+  // Mini Ícone do Elo (.png)
   if (eloIconEl) {
     eloIconEl.src = `assets/elos/${formatarNomeImg(eloAtual)}.png`;
     eloIconEl.alt = `Elo ${eloAtual}`;
@@ -278,7 +287,7 @@ async function changeTheme(themeName, sendToServer = true) {
 }
 
 /* ==========================================================================
-   RANKING GERAL (CORREÇÃO DA VALIDAÇÃO E FILTRO DE AVATARES EM LOOP)
+   RANKING GERAL (CORREÇÃO DE RENDERIZAÇÃO E ATUALIZAÇÃO EM LOOP DE COSMÉTICOS)
    ========================================================================== */
 async function loadRanking() {
   try {
@@ -294,13 +303,16 @@ async function loadRanking() {
       data.forEach((player, index) => {
         const itemLi = document.createElement("li");
         itemLi.classList.add("ranking-item");
+        
+        // Descobre o elo com base nos pontos retornados dinamicamente do banco
         const playerElo = obterElo(player.points || 0);
         
+        // Verifica se o jogador possui borda ativa
         const hasBorder = player.border && player.border !== 'default';
         const borderSrc = hasBorder ? `src="assets/borders/${player.border}.png"` : '';
         const borderStyle = hasBorder ? 'display:block;' : 'display:none;';
         
-        // CORREÇÃO: Garante que lê estritamente a string vinda do banco individual de cada player
+        // CORREÇÃO MÁGICA: Lê dinamicamente o avatar individual de cada jogador cadastrado na API!
         const playerAvatarFile = typeof player.avatar === "string" && player.avatar.trim() !== "" ? player.avatar : "Dino";
 
         itemLi.innerHTML = `

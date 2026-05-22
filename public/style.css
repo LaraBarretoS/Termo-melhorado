@@ -7,7 +7,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
   display: flex;
-  flex-direction: column; /* Alterado para empilhar a barra de cosméticos no topo */
+  flex-direction: column; /* Empilha a barra de cosméticos no topo */
   align-items: center;
   min-height: 100vh;
 }
@@ -133,7 +133,7 @@ body {
 }
 
 /* ==========================================================================
-   PAINEL LATERAL E SISTEMA DE CAMADAS DO AVATAR/BORDA (CORRIGIDO)
+   PAINEL LATERAL E SISTEMA DO AVATAR/BORDA (ORGANIZADO)
    ========================================================================== */
 .side-panel {
   width: 100%;
@@ -147,23 +147,32 @@ body {
   border: 1px solid #3a3a3c;
   align-self: flex-start;
   box-sizing: border-box;
+  position: relative;
 }
 
-/* Container que centraliza as fotos empilhadas (Wrapper) */
+/* Flex que une o bloco do Avatar ao lado do bloco de Texto + Elo */
+.profile-header-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+}
+
+/* Container controlado das fotos empilhadas (Sem o ícone do elo dentro) */
 .profile-avatar-wrapper {
   position: relative !important;
-  width: 120px !important;
-  height: 120px !important;
-  margin: 0 auto 15px auto !important;
+  width: 96px !important;
+  height: 96px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
 /* Camada 1: Foto circular interna */
 .profile-avatar-circle {
-  width: 86px !important;
-  height: 86px !important;
+  width: 72px !important;
+  height: 72px !important;
   border-radius: 50% !important;
   object-fit: cover !important;
   z-index: 1 !important;
@@ -171,7 +180,7 @@ body {
   display: block !important;
 }
 
-/* Camada 2: Borda externa que cobre a foto */
+/* Camada 2: Borda externa que cobre o avatar */
 .profile-border-overlay {
   position: absolute !important;
   top: 0 !important;
@@ -179,19 +188,40 @@ body {
   width: 100% !important;
   height: 100% !important;
   z-index: 2 !important;
-  pointer-events: none !important; /* Garante que cliques ignorem a borda */
+  pointer-events: none !important;
   object-fit: contain !important;
 }
 
-/* Camada 3: Mini ícone do elo no canto (Classe corrigida para bater com o HTML) */
+/* Alinhamento que divide Textos para a esquerda e empurra o Elo para a bola vermelha */
+.profile-text-elo-wrapper {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+.profile-info-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Espaço reservado para o Ícone do Elo (Posicionado na extrema direita) */
+.profile-elo-icon-holder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .elo-icon-img {
-  position: absolute !important;
-  bottom: 0 !important;
-  right: 0 !important;
-  width: 36px !important;
-  height: 36px !important;
-  z-index: 3 !important;
+  width: 100% !important;
+  height: 100% !important;
   object-fit: contain !important;
+  display: block !important;
 }
 
 .profile-section select {
@@ -209,8 +239,8 @@ body {
 /* Botão Sair no Topo Superior Direito */
 .btn-logout-top {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 10px;
+  right: 10px;
   background-color: transparent;
   color: #a4a4a6;
   border: none;
@@ -263,7 +293,7 @@ body {
 }
 
 /* ==========================================================================
-   RANKING COM SUPORTE A FOTO E BORDA (CORRIGIDO)
+   RANKING COM SUPORTE A FOTO E BORDA
    ========================================================================== */
 .ranking-section h2 {
   margin-top: 0;
@@ -288,7 +318,6 @@ body {
   background-color: #272729;
 }
 
-/* Container controlado para evitar estiramentos no avatar do grid */
 .ranking-avatar-wrapper {
   position: relative !important;
   width: 54px !important;
@@ -296,7 +325,7 @@ body {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  flex-shrink: 0 !important;     /* Impede deformações em resoluções menores */
+  flex-shrink: 0 !important;
 }
 
 .ranking-avatar-img {

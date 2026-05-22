@@ -31,21 +31,30 @@
 
   <div class="main-layout">
     <div class="side-panel">
-      <div class="profile-section" style="position: relative;">
+      <div class="profile-section">
         <button onclick="logout()" class="btn-logout-top" title="Sair da Conta">✕ Sair</button>
 
         <h2>Perfil</h2>
         
-        <div class="profile-avatar-wrapper">
-          <img id="profile-avatar-img" src="assets/avatars/Dino.jpg" alt="Avatar" class="profile-avatar-circle">
-          <img id="profile-border-img" src="" alt="Borda" class="profile-border-overlay" style="display: none;">
-          <img id="profile-elo-icon" src="" alt="Elo" class="elo-icon-img" style="display: none;">
-        </div>
+        <div class="profile-header-container">
+          <div class="profile-avatar-wrapper">
+            <img id="profile-avatar-img" src="assets/avatars/Dino.jpg" alt="Avatar" class="profile-avatar-circle">
+            <img id="profile-border-img" src="" alt="Borda" class="profile-border-overlay" style="display: none;">
+          </div>
 
-        <p>Jogador: <span id="profile-username">-</span></p>
-        <p id="profile-points-wrapper">Pontos: <span id="profile-points">0</span></p>
+          <div class="profile-text-elo-wrapper">
+            <div class="profile-info-texts">
+              <p>Jogador: <span id="profile-username">-</span></p>
+              <p id="profile-points-wrapper">Pontos: <span id="profile-points">0</span></p>
+            </div>
+            
+            <div class="profile-elo-icon-holder">
+              <img id="profile-elo-icon" src="" alt="Elo" class="elo-icon-img" style="display: none;">
+            </div>
+          </div>
+        </div>
         
-        <label for="theme-select">Tema do Jogo:</label>
+        <label for="theme-select" style="display: block; margin-top: 15px;">Tema do Jogo:</label>
         <select id="theme-select" onchange="changeTheme(this.value)">
           <option value="default">Padrão (Escuro)</option>
           <option value="dark-red">Vampire (Preto e Vermelho)</option>

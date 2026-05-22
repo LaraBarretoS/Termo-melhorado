@@ -59,6 +59,8 @@ function formatarNomeImg(nomeElo) {
   if (nome === "imortal 1") return "immortal-1";
   if (nome === "imortal 2") return "immortal-2";
   if (nome === "imortal 3") return "immortal-3";
+  if (nome === "diamante") return "diamond";     // CORRIGIDO: Seus arquivos físicos usam o termo em inglês
+  if (nome === "ascendente") return "ascendant"; 
   return nome;
 }
 
@@ -209,7 +211,7 @@ function updatePointsDisplay() {
   let pts = Number(currentUser.points) || 0;
   
   const pointsEl = document.getElementById("profile-points");
-  const eloIconEl = document.getElementById("profile-elo-icon"); // Captura corrigida via ID do HTML
+  const eloIconEl = document.getElementById("profile-elo-icon"); 
   const avatarImgEl = document.getElementById("profile-avatar-img");
   const borderImgEl = document.getElementById("profile-border-img");
   
@@ -236,11 +238,14 @@ function updatePointsDisplay() {
     }
   }
 
-  // Mini Ícone do Elo (.png) - Correção da exibição
+  // Mini Ícone do Elo (.png) - Tratado e corrigido o caminho
   if (eloIconEl) {
     eloIconEl.src = `assets/elos/${formatarNomeImg(eloAtual)}.png`;
     eloIconEl.alt = `Elo ${eloAtual}`;
-    eloIconEl.style.display = "block"; // Força a renderização
+    eloIconEl.style.display = "block"; 
+    eloIconEl.onerror = function() {
+      this.style.display = "none"; 
+    };
   }
 }
 
@@ -273,7 +278,7 @@ async function changeTheme(themeName, sendToServer = true) {
 }
 
 /* ==========================================================================
-   RANKING GERAL COM FOTOS E BORDAS SOBREPOSTAS COM OS NOVOS ARQUIVOS
+   RANKING GERAL (CORREÇÃO DA VALIDAÇÃO E FILTRO DE AVATARES EM LOOP)
    ========================================================================== */
 async function loadRanking() {
   try {
@@ -295,14 +300,15 @@ async function loadRanking() {
         const borderSrc = hasBorder ? `src="assets/borders/${player.border}.png"` : '';
         const borderStyle = hasBorder ? 'display:block;' : 'display:none;';
         
-        const playerAvatarFile = typeof player.avatar === "string" ? player.avatar : "Dino";
+        // CORREÇÃO: Garante que lê estritamente a string vinda do banco individual de cada player
+        const playerAvatarFile = typeof player.avatar === "string" && player.avatar.trim() !== "" ? player.avatar : "Dino";
 
         itemLi.innerHTML = `
           <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-weight:bold; width:20px; text-align: left;">${index + 1}°</span>
             
             <div class="ranking-avatar-wrapper">
-              <img src="assets/avatars/${playerAvatarFile}.jpg" class="ranking-avatar-img">
+              <img src="assets/avatars/${playerAvatarFile}.jpg" class="ranking-avatar-img" onerror="this.src='assets/avatars/Dino.jpg'">
               <img ${borderSrc} class="ranking-border-overlay" style="${borderStyle}">
             </div>
 
@@ -574,7 +580,7 @@ function checkWord() {
 
   if (boardsData.every(b => b.solved)) {
     if(statusText) statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts`;
-    saveScore(totalRoundScore, true); // Envia true sinalizando vitória para avançar o nível
+    saveScore(totalRoundScore, true); 
     showEndGameModal(true);
     currentRow = MAX_ROWS;
     return;
@@ -613,12 +619,11 @@ async function saveScore(scorePoints, e_Vitoria) {
     if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2.5); 
   }
 
-  // Se o jogador venceu, passamos para o próximo nível automaticamente
   if (e_Vitoria) {
     if (currentLevel < 3) {
       currentLevel++;
     } else {
-      currentLevel = 1; // Reseta pro Loop após fechar o Nível 4 tabuleiros
+      currentLevel = 1; 
     }
   }
 
@@ -684,7 +689,7 @@ function showEndGameModal(isVictory) {
   btnReset.className = "m-btn m-btn-next";
   btnReset.addEventListener("click", () => {
     modal.remove();
-    startNewGame(); // Recarrega o grid no novo nível limpo sem dar F5 completo
+    startNewGame(); 
   });
   btnContainer.appendChild(btnReset);
 

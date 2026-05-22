@@ -133,7 +133,7 @@ body {
 }
 
 /* ==========================================================================
-   PAINEL LATERAL E SISTEMA DE CAMADAS DO AVATAR/BORDA
+   PAINEL LATERAL E SISTEMA DE CAMADAS DO AVATAR/BORDA (CORRIGIDO)
    ========================================================================== */
 .side-panel {
   flex: 1;
@@ -147,11 +147,11 @@ body {
   align-self: flex-start;
 }
 
-/* Container que centraliza as fotos empilhadas (Wrapper) */
+/* Container central das fotos empilhadas */
 .profile-avatar-wrapper {
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: 120px;       /* Ajustado para comportar a proporção da borda */
+  height: 120px;
   margin: 0 auto 15px auto;
   display: flex;
   align-items: center;
@@ -160,33 +160,34 @@ body {
 
 /* Camada 1: Foto circular interna */
 .profile-avatar-circle {
-  width: 80px;
-  height: 80px;
+  width: 90px;        /* Ligeiramente menor para a borda envelopar sem recortar */
+  height: 90px;
   border-radius: 50%;
   object-fit: cover;
   z-index: 1;
   background-color: #272729;
+  display: block;
 }
 
-/* Camada 2: Borda externa que cobre a foto */
+/* Camada 2: Borda externa absoluta centralizada */
 .profile-border-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  height: 100%;
   z-index: 2;
-  pointer-events: none; /* Garante que cliques ignorem a borda */
+  pointer-events: none;
   object-fit: contain;
 }
 
-/* Camada 3: Mini ícone do elo no canto */
+/* Camada 3: Mini ícone do elo posicionado no canto inferior direito */
 .profile-elo-icon {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   z-index: 3;
   object-fit: contain;
 }
@@ -258,7 +259,9 @@ body {
   background-color: rgba(83, 141, 78, 0.1);
 }
 
-/* Ranking com Suporte a Foto e Borda */
+/* ==========================================================================
+   RANKING COM SUPORTE A FOTO E BORDA (CORRIGIDO)
+   ========================================================================== */
 .ranking-section h2 {
   margin-top: 0;
   margin-bottom: 15px;
@@ -282,13 +285,15 @@ body {
   background-color: #272729;
 }
 
+/* Container controlado para evitar estiramentos no avatar do grid */
 .ranking-avatar-wrapper {
   position: relative;
-  width: 50px;
-  height: 50px;
+  width: 54px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;     /* Impede deformações em resoluções menores */
 }
 
 .ranking-avatar-img {
@@ -298,15 +303,17 @@ body {
   object-fit: cover;
   z-index: 1;
   background-color: #1a1a1c;
+  display: block;
 }
 
 .ranking-border-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 50px;
-  height: 50px;
+  width: 100%;
+  height: 100%;
   z-index: 2;
+  pointer-events: none;
   object-fit: contain;
 }
 
@@ -315,6 +322,7 @@ body {
   width: 32px;
   height: 32px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================

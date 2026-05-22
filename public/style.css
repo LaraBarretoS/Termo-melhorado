@@ -666,3 +666,7 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
     border-radius: 3px;
   }
 }
+.item-locked {
+  filter: grayscale(100%) brightness(40%);
+  cursor: not-allowed !important;
+}

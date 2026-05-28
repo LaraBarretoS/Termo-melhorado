@@ -33,7 +33,7 @@ const listaBordasReais = [
   { id: "silver-border", nome: "Borda Prata" },
   { id: "gold-border", nome: "Borda Ouro" },
   { id: "platinum-border", nome: "Borda Platina" },
-  { id: "ascendant-border", nome: "Borda Ascendente" }, 
+  { id: "ascendent-border", nome: "Borda Ascendente" }, 
   { id: "imortal-1-border", nome: "Borda Imortal I" },
   { id: "imortal-2-border", nome: "Borda Imortal II" },
   { id: "imortal-3-border", nome: "Borda Imortal III" },
@@ -191,6 +191,11 @@ function selecionarAvatar(nomeAvatar) {
   currentUser.avatar = nomeAvatar;
   localStorage.setItem("user", JSON.stringify(currentUser));
   renderCosmeticsGrid(); 
+}
+
+// Auxiliar para obter a quantidade máxima de linhas dinâmica do nível ativo
+function getMaxRowsForCurrentLevel() {
+  return currentLevel === 3 ? 8 : MAX_ROWS;
 }
 
 function selecionarBorda(idBorda) {
@@ -445,7 +450,7 @@ function updateKeyboardColors(letter, status) {
 // BLOCO: ENTRADA DE DADOS E EVENTOS DE DIGITAÇÃO (MOUSEDOWN / KEYDOWN)
 // ==========================================================================
 function selectTile(colIndex) {
-  if (currentRow >= MAX_ROWS) return;
+  if (currentRow >= getMaxRowsForCurrentLevel()) return;
   currentCol = colIndex;
   renderActiveTileIndicator();
 }
@@ -461,7 +466,7 @@ function renderActiveTileIndicator() {
 }
 
 function pressKey(key) {
-  if (currentRow >= MAX_ROWS || boardsData.every(b => b.solved)) return;
+  if (currentRow >= getMaxRowsForCurrentLevel() || boardsData.every(b => b.solved)) return;
 
   if (key === "ArrowLeft" || key === "ARROWLEFT") {
     if (currentCol > 0) { currentCol--; renderActiveTileIndicator(); }
@@ -542,6 +547,9 @@ async function startNewGame() {
   else if (currentLevel === 3) currentMode = 4;
   else { currentLevel = 1; currentMode = 1; }
 
+  // Determina as linhas dinamicamente (8 para o nível 3, MAX_ROWS para os outros)
+  const currentMaxRows = getMaxRowsForCurrentLevel();
+
   if(boardContainer) {
     boardContainer.innerHTML = "";
     boardContainer.className = `mode-${currentMode}`;
@@ -559,7 +567,7 @@ async function startNewGame() {
       console.error("Erro ao buscar palavra:", err);
       targetWords.push("TERMO");
     }
-    guesses.push(Array.from({ length: MAX_ROWS }, () => Array(MAX_COLS).fill("")));
+    guesses.push(Array.from({ length: currentMaxRows }, () => Array(MAX_COLS).fill("")));
     boardsData.push({ solved: false });
   }
 
@@ -569,7 +577,7 @@ async function startNewGame() {
       boardEl.className = "board";
       boardEl.id = `board-${b}`;
 
-      for (let r = 0; r < MAX_ROWS; r++) {
+      for (let r = 0; r < currentMaxRows; r++) {
         const rowEl = document.createElement("div");
         rowEl.className = "row";
         if (r === 0) rowEl.classList.add("row-active");
@@ -583,7 +591,7 @@ async function startNewGame() {
           });
           rowEl.appendChild(tile);
         }
-        boardEl.appendChild(rowEl); // CORRIGIDO: Agora anexa as linhas corretamente ao elemento pai do tabuleiro
+        boardEl.appendChild(rowEl); 
       }
       boardContainer.appendChild(boardEl);
     }
@@ -604,6 +612,7 @@ function checkWord() {
   const firstActive = boardsData.findIndex(b => !b.solved);
   if(firstActive === -1) return;
   const currentGuessStr = guesses[firstActive][currentRow].join("");
+  const currentMaxRows = getMaxRowsForCurrentLevel();
 
   for (let b = 0; b < currentMode; b++) {
     if (boardsData[b].solved) continue;
@@ -661,11 +670,11 @@ function checkWord() {
     if(statusText) statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts`;
     saveScore(totalRoundScore, true); 
     showEndGameModal(true);
-    currentRow = MAX_ROWS;
+    currentRow = currentMaxRows;
     return;
   }
 
-  if (currentRow === MAX_ROWS) {
+  if (currentRow === currentMaxRows) {
     if(statusText) {
       statusText.innerText = `Fim de jogo! Resposta: ${targetWords.join(" | ")}`;
     }

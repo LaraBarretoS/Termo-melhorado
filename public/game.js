@@ -33,8 +33,8 @@ const listaBordasReais = [
   { id: "silver-border", nome: "Borda Prata" },
   { id: "gold-border", nome: "Borda Ouro" },
   { id: "platinum-border", nome: "Borda Platina" },
-  { id: "diamond-border", nome: "Borda Diamante" }, // CORRIGIDO: Adicionado aqui para aparecer na seleção
-  { id: "ascendent-border", nome: "Borda Ascendente" }, 
+  { id: "diamond-border", nome: "Borda Diamante" },
+  { id: "ascendant-border", nome: "Borda Ascendente" }, // CORRIGIDO: de 'ascendent' para 'ascendant' para bater com os requisitos
   { id: "imortal-1-border", nome: "Borda Imortal I" },
   { id: "imortal-2-border", nome: "Borda Imortal II" },
   { id: "imortal-3-border", nome: "Borda Imortal III" },
@@ -131,7 +131,7 @@ function renderCosmeticsGrid() {
     "gold-border": 150000,     
     "platinum-border": 500000,
     "diamond-border": 1500000,
-    "ascendant-border": 3000000, 
+    "ascendant-border": 3000000, // CORRIGIDO: Agora bate perfeitamente com a listaBordasReais
     "imortal-1-border": 5000000,
     "imortal-2-border": 7000000,
     "imortal-3-border": 9000000,
@@ -140,7 +140,7 @@ function renderCosmeticsGrid() {
 
   gridBorders.innerHTML = "";
   listaBordasReais.forEach(borda => {
-    const pontosNecessarios = requisitosBordas[borda.id] || 0;
+    const pontosNecessarios = requisitosBordas[borda.id] !== undefined ? requisitosBordas[borda.id] : 0;
     const estaBloqueada = pointsJogador < pontosNecessarios;
 
     if (borda.id === "default") {
@@ -192,7 +192,7 @@ function selecionarAvatar(nomeAvatar) {
   currentUser.avatar = nomeAvatar;
   localStorage.setItem("user", JSON.stringify(currentUser));
   renderCosmeticsGrid(); 
-  salvarEAtualizarPagina(); // CORRIGIDO: Garante o envio ao servidor e recarregamento imediatamente
+  salvarEAtualizarPagina(); 
 }
 
 // Auxiliar para obter a quantidade máxima de linhas dinâmica do nível ativo
@@ -205,7 +205,7 @@ function selecionarBorda(idBorda) {
   currentUser.border = idBorda;
   localStorage.setItem("user", JSON.stringify(currentUser));
   renderCosmeticsGrid(); 
-  salvarEAtualizarPagina(); // CORRIGIDO: Garante o envio ao servidor e recarregamento imediatamente
+  salvarEAtualizarPagina(); 
 }
 
 async function salvarEAtualizarPagina() {
@@ -368,16 +368,10 @@ async function loadRanking() {
         
         const playerElo = obterElo(player.points || 0);
         
-        let playerAvatarFile = "Dino";
-        let playerBorderFile = "default";
-
-        if (currentUser && player.username === currentUser.username) {
-          playerAvatarFile = currentUser.avatar || "Dino";
-          playerBorderFile = currentUser.border || "default";
-        } else {
-          playerAvatarFile = typeof player.avatar === "string" && player.avatar.trim() !== "" ? player.avatar : "Dino";
-          playerBorderFile = player.border || "default";
-        }
+        // CORRIGIDO: O ranking agora renderiza estritamente o que vem do banco de dados (player.avatar e player.border),
+        // eliminando a dependência do localStorage local que quebrava a visualização para outros computadores.
+        let playerAvatarFile = typeof player.avatar === "string" && player.avatar.trim() !== "" ? player.avatar : "Dino";
+        let playerBorderFile = typeof player.border === "string" && player.border.trim() !== "" ? player.border : "default";
 
         const hasBorder = playerBorderFile !== 'default';
         const borderSrc = hasBorder ? `src="assets/borders/${playerBorderFile}.png"` : '';
@@ -550,7 +544,6 @@ async function startNewGame() {
   else if (currentLevel === 3) currentMode = 4;
   else { currentLevel = 1; currentMode = 1; }
 
-  // Determina as linhas dinamicamente (8 para o nível 3, MAX_ROWS para os outros)
   const currentMaxRows = getMaxRowsForCurrentLevel();
 
   if(boardContainer) {
@@ -667,7 +660,7 @@ function checkWord() {
 
   totalRoundScore += roundPointsGained;
   currentRow++;
-  col = 0;
+  currentCol = 0;
 
   if (boardsData.every(b => b.solved)) {
     if(statusText) statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts`;

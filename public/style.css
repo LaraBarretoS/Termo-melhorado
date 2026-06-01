@@ -139,7 +139,6 @@ body {
 /* ==========================================================================
    PAINEL LATERAL E SISTEMA DO AVATAR/BORDA (ORGANIZADO)
    ========================================================================== */
-/* MODIFICADO: Fixado em largura de 300px para as duas colunas laterais */
 .side-panel {
   flex: 0 0 300px;
   background-color: #1a1a1c;
@@ -154,7 +153,6 @@ body {
   position: relative;
 }
 
-/* Flex que une o bloco do Avatar ao lado do bloco de Texto + Elo */
 .profile-header-container {
   display: flex;
   align-items: center;
@@ -162,7 +160,6 @@ body {
   width: 100%;
 }
 
-/* Container controlado das fotos empilhadas (Sem o ícone do elo dentro) */
 .profile-avatar-wrapper {
   position: relative !important;
   width: 96px !important;
@@ -173,7 +170,6 @@ body {
   flex-shrink: 0 !important;
 }
 
-/* Camada 1: Foto circular interna */
 .profile-avatar-circle {
   width: 72px !important;
   height: 72px !important;
@@ -184,7 +180,6 @@ body {
   display: block !important;
 }
 
-/* Camada 2: Borda externa que cobre o avatar */
 .profile-border-overlay {
   position: absolute !important;
   top: 0 !important;
@@ -196,7 +191,6 @@ body {
   object-fit: contain !important;
 }
 
-/* Alinhamento que divide Textos para a esquerda e empurra o Elo para a bola vermelha */
 .profile-text-elo-wrapper {
   display: flex !important;
   justify-content: space-between !important;
@@ -210,7 +204,11 @@ body {
   gap: 4px;
 }
 
-/* Espaço reservado para o Ícone do Elo (Posicionado na extrema direita) */
+.profile-info-texts p {
+  margin: 0;
+  font-size: 14px;
+}
+
 .profile-elo-icon-holder {
   display: flex;
   align-items: center;
@@ -228,6 +226,83 @@ body {
   display: block !important;
 }
 
+/* ==========================================================================
+   NOVO: ESTILOS DA DIV DO EVENTO RELÂMPAGO (REPOSICIONADO EM FLUXO VERTICAL)
+   ========================================================================== */
+.lightning-event-card {
+  background: rgba(255, 70, 85, 0.05);
+  border: 2px dashed #ff4655;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.event-title-pulse {
+  color: #ff4655;
+  margin: 0;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.7; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0.7; transform: scale(0.98); }
+}
+
+#event-timer {
+  font-size: 12px;
+  margin: 0;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+#roulette-container {
+  width: 100%;
+  position: relative;
+}
+
+#roulette-display {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ff4655;
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 10px 5px;
+  background: #111;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+#btn-spin {
+  width: 100%;
+  background: #ff4655;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px;
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background-color 0.2s;
+}
+
+#btn-spin:hover {
+  background-color: #e03e4b;
+}
+
+/* Select de Temas integrado */
 .profile-section select {
   width: 100%;
   padding: 8px;
@@ -370,7 +445,6 @@ body {
 /* ==========================================================================
    ÁREA DO JOGO E TABULEIROS (GRID DINÂMICA CENTRALIZADA)
    ========================================================================== */
-/* MODIFICADO: Agora flex cresce de forma dinâmica ocupando o meio da página */
 .game-container { 
   flex: 1; 
   display: flex; 
@@ -591,7 +665,6 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
    ESTILOS RESPONSIVOS PARA CELULAR (MEDIA QUERY)
    ========================================================================== */
 @media (max-width: 992px) {
-  /* MODIFICADO: Em telas médias/pequenas, quebra as 3 colunas em ordem vertical fluida */
   .main-layout {
     flex-direction: column;
     align-items: center;
@@ -625,7 +698,7 @@ h1 { text-align: center; letter-spacing: 5px; margin-top: 0; margin-bottom: 10px
 
   .game-container {
     width: 100%;
-    order: -1; /* Força o jogo a ficar no topo em telas menores se preferir, ou remova para seguir o fluxo */
+    order: -1;
   }
 
   h1 {

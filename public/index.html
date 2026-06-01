@@ -31,23 +31,24 @@
               <p>Jogador: <span id="profile-username">-</span></p>
               <p id="profile-points-wrapper">Pontos: <span id="profile-points">0</span></p>
             </div>
-
-            <div id="event-panel" class="profile-card" style="margin-top: 15px; display: none; border: 2px dashed #ff4655; text-align: center; padding: 15px; background: rgba(255, 70, 85, 0.05);">
-  <h3 style="color: #ff4655; margin: 0 0 5px 0; font-size: 16px; animation: pulse 1.5s infinite;">⚡ EVENTO RELÂMPAGO!</h3>
-  <p id="event-timer" style="font-size: 13px; margin: 5px 0; font-weight: bold; color: #fff;">O evento acaba em: --:--:--</p>
-  
-  <div id="roulette-container" style="margin: 10px 0; position: relative;">
-    <div id="roulette-display" style="font-size: 24px; font-weight: bold; color: #ff4655; border: 2px solid #333; border-radius: 8px; padding: 10px; background: #111; min-height: 35px; display: flex; align-items: center; justify-content: center;">
-      🎰 ?x MULTIPLICADOR
-    </div>
-  </div>
-
-  <button id="btn-spin" onclick="spinRoulette()" style="width: 100%; background: #ff4655; color: white; border: none; padding
             
             <div class="profile-elo-icon-holder">
               <img id="profile-elo-icon" src="" alt="Elo" class="elo-icon-img" style="display: none;">
             </div>
           </div>
+        </div>
+        
+        <div id="event-panel" class="lightning-event-card" style="display: none;">
+          <h3 class="event-title-pulse">⚡ EVENTO RELÂMPAGO!</h3>
+          <p id="event-timer">O evento acaba em: --:--:--</p>
+          
+          <div id="roulette-container">
+            <div id="roulette-display">
+              🎰 ?x MULTIPLICADOR
+            </div>
+          </div>
+
+          <button id="btn-spin" onclick="spinRoulette()">GIRAR ROLETA GRÁTIS</button>
         </div>
         
         <label for="theme-select" style="display: block; margin-top: 15px;">Tema do Jogo:</label>

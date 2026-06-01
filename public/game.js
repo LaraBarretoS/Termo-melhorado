@@ -34,7 +34,7 @@ const listaBordasReais = [
   { id: "gold-border", nome: "Borda Ouro" },
   { id: "platinum-border", nome: "Borda Platina" },
   { id: "diamond-border", nome: "Borda Diamante" },
-  { id: "ascendant-border", nome: "Borda Ascendente" }, // CORRIGIDO: de 'ascendent' para 'ascendant' para bater com os requisitos
+  { id: "ascendant-border", nome: "Borda Ascendente" }, 
   { id: "imortal-1-border", nome: "Borda Imortal I" },
   { id: "imortal-2-border", nome: "Borda Imortal II" },
   { id: "imortal-3-border", nome: "Borda Imortal III" },
@@ -131,7 +131,7 @@ function renderCosmeticsGrid() {
     "gold-border": 150000,     
     "platinum-border": 500000,
     "diamond-border": 1500000,
-    "ascendant-border": 3000000, // CORRIGIDO: Agora bate perfeitamente com a listaBordasReais
+    "ascendant-border": 3000000, 
     "imortal-1-border": 5000000,
     "imortal-2-border": 7000000,
     "imortal-3-border": 9000000,
@@ -368,10 +368,19 @@ async function loadRanking() {
         
         const playerElo = obterElo(player.points || 0);
         
-        // CORRIGIDO: O ranking agora renderiza estritamente o que vem do banco de dados (player.avatar e player.border),
-        // eliminando a dependência do localStorage local que quebrava a visualização para outros computadores.
-        let playerAvatarFile = typeof player.avatar === "string" && player.avatar.trim() !== "" ? player.avatar : "Dino";
-        let playerBorderFile = typeof player.border === "string" && player.border.trim() !== "" ? player.border : "default";
+        let playerAvatarFile = "Dino";
+        let playerBorderFile = "default";
+
+        // CORRIGIDO: Sistema híbrido de Fallback. Ele checa se a linha do loop pertence ao jogador ativo.
+        // Se pertencer, prioriza o localStorage atualizado na hora. Se for de outro player, tenta usar os dados
+        // do banco (player.avatar). Se o banco retornar vazio (por falha ou por ser nulo), cai no padrão ("Dino").
+        if (currentUser && player.username === currentUser.username) {
+          playerAvatarFile = currentUser.avatar || "Dino";
+          playerBorderFile = currentUser.border || "default";
+        } else {
+          playerAvatarFile = typeof player.avatar === "string" && player.avatar.trim() !== "" ? player.avatar : "Dino";
+          playerBorderFile = typeof player.border === "string" && player.border.trim() !== "" ? player.border : "default";
+        }
 
         const hasBorder = playerBorderFile !== 'default';
         const borderSrc = hasBorder ? `src="assets/borders/${playerBorderFile}.png"` : '';

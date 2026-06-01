@@ -20,6 +20,11 @@ let boardsData = [];
 
 let currentUser = JSON.parse(localStorage.getItem("user"));
 
+// Variáveis do Novo Sistema de Evento
+let eventMultiplier = 1; // 1x por padrão (sem evento)
+let eventActive = false;
+let timerInterval = null;
+
 
 // ==========================================================================
 // BLOCO: MAPEAMENTO DE ARQUIVOS FÍSICOS (AVATARES E BORDAS)
@@ -195,7 +200,6 @@ function selecionarAvatar(nomeAvatar) {
   salvarEAtualizarPagina(); 
 }
 
-// Auxiliar para obter a quantidade máxima de linhas dinâmica do nível ativo
 function getMaxRowsForCurrentLevel() {
   return currentLevel === 3 ? 8 : MAX_ROWS;
 }
@@ -371,9 +375,6 @@ async function loadRanking() {
         let playerAvatarFile = "Dino";
         let playerBorderFile = "default";
 
-        // CORRIGIDO: Sistema híbrido de Fallback. Ele checa se a linha do loop pertence ao jogador ativo.
-        // Se pertencer, prioriza o localStorage atualizado na hora. Se for de outro player, tenta usar os dados
-        // do banco (player.avatar). Se o banco retornar vazio (por falha ou por ser nulo), cai no padrão ("Dino").
         if (currentUser && player.username === currentUser.username) {
           playerAvatarFile = currentUser.avatar || "Dino";
           playerBorderFile = currentUser.border || "default";
@@ -410,6 +411,135 @@ async function loadRanking() {
   } catch (err) {
     console.error("Erro ao carregar o ranking:", err);
   }
+}
+
+
+// ==========================================================================
+// BLOCO NOVO: SISTEMA DE EVENTO RELÂMPAGO E ROLETA (3X AO DIA, DURAÇÃO 2H)
+// ==========================================================================
+function pseudoRandom(seed) {
+  let x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+function checkFlashEvent() {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  
+  // Define 3 janelas de horários fixas no dia para sortear os eventos
+  const windows = [
+    { startHour: 0, endHour: 7, seedModifier: 11 },
+    { startHour: 8, endHour: 15, seedModifier: 22 },
+    { startHour: 16, endHour: 23, seedModifier: 33 }
+  ];
+
+  let currentActiveEventEnd = null;
+
+  windows.forEach(w => {
+    // Sorteia uma hora inicial aleatória dentro do bloco (ex: entre 0h e 5h para o primeiro bloco dar tempo de durar 2h)
+    const seed = startOfDay + w.seedModifier;
+    const randomOffsetHours = Math.floor(pseudoRandom(seed) * (w.endHour - w.startHour - 1));
+    const eventStartHour = w.startHour + randomOffsetHours;
+    
+    const eventStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eventStartHour, 0, 0);
+    const eventEndDate = new Date(eventStartDate.getTime() + (2 * 60 * 60 * 1000)); // +2 horas de duração
+
+    if (now >= eventStartDate && now < eventEndDate) {
+      currentActiveEventEnd = eventEndDate;
+    }
+  });
+
+  const panel = document.getElementById("event-panel");
+  if (!panel) return;
+
+  if (currentActiveEventEnd) {
+    // Ativa o evento
+    if (!eventActive) {
+      eventActive = true;
+      panel.style.display = "block";
+      resetRouletteUI();
+    }
+    updateEventCountdown(currentActiveEventEnd);
+  } else {
+    // Desativa o evento
+    eventActive = false;
+    eventMultiplier = 1;
+    panel.style.display = "none";
+    if (timerInterval) clearInterval(timerInterval);
+  }
+}
+
+function updateEventCountdown(endTime) {
+  const timerEl = document.getElementById("event-timer");
+  if (!timerEl) return;
+
+  if (timerInterval) clearInterval(timerInterval);
+
+  timerInterval = setInterval(() => {
+    const diff = endTime.getTime() - new Date().getTime();
+    if (diff <= 0) {
+      clearInterval(timerInterval);
+      checkFlashEvent();
+      return;
+    }
+
+    const hours = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
+    const minutes = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+    const seconds = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
+
+    timerEl.innerText = `O evento acaba em: ${hours}:${minutes}:${seconds}`;
+  }, 1000);
+}
+
+function resetRouletteUI() {
+  const display = document.getElementById("roulette-display");
+  const btn = document.getElementById("btn-spin");
+  
+  // Limpa o multiplicador ao iniciar um novo evento para o jogador girar de novo
+  eventMultiplier = 1; 
+  if (display) display.innerHTML = "🎰 ?x MULTIPLICADOR";
+  if (btn) {
+    btn.disabled = false;
+    btn.innerText = "GIRAR ROLETA GRÁTIS";
+    btn.style.background = "#ff4655";
+  }
+}
+
+function spinRoulette() {
+  const display = document.getElementById("roulette-display");
+  const btn = document.getElementById("btn-spin");
+  if (!display || !btn) return;
+
+  btn.disabled = true;
+  btn.innerText = "SORTEANDO...";
+  btn.style.background = "#555";
+
+  let counter = 0;
+  const options = [2, 3, 5];
+  
+  // Efeito visual de rotação rápida da roleta
+  const interval = setInterval(() => {
+    const tempOpt = options[Math.floor(Math.random() * options.length)];
+    display.innerText = `🎰 ${tempOpt}x MULTIPLICADOR`;
+    counter++;
+
+    if (counter > 15) {
+      clearInterval(interval);
+      
+      // Definição das chances: 5x (10%), 3x (35%), 2x (55%)
+      const rand = Math.random() * 100;
+      if (rand < 10) {
+        eventMultiplier = 5;
+      } else if (rand < 45) {
+        eventMultiplier = 3;
+      } else {
+        eventMultiplier = 2;
+      }
+
+      display.innerHTML = `🔥 ${eventMultiplier}x ATIVADO!`;
+      btn.innerText = "BÔNUS APLICADO NESTA SESSÃO";
+    }
+  }, 100);
 }
 
 
@@ -562,6 +692,7 @@ async function startNewGame() {
 
   updatePointsDisplay();
   await loadRanking();
+  checkFlashEvent(); // Sincroniza o estado do evento ao iniciar nova partida
 
   for (let b = 0; b < currentMode; b++) {
     try {
@@ -672,7 +803,13 @@ function checkWord() {
   currentCol = 0;
 
   if (boardsData.every(b => b.solved)) {
-    if(statusText) statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts`;
+    // CORRIGIDO: Mostra os pontos finais multiplicados na string de vitória se houver evento ativo
+    let scoreCalculado = totalRoundScore;
+    if (currentLevel === 2) scoreCalculado = Math.floor(scoreCalculado * 2); 
+    if (currentLevel === 3) scoreCalculado = Math.floor(scoreCalculado * 2.5); 
+    if (eventActive && eventMultiplier > 1) scoreCalculado = Math.floor(scoreCalculado * eventMultiplier);
+
+    if(statusText) statusText.innerText = `Vitória! 🎉 +${scoreCalculado.toLocaleString()} pts`;
     saveScore(totalRoundScore, true); 
     showEndGameModal(true);
     currentRow = currentMaxRows;
@@ -713,6 +850,12 @@ async function saveScore(scorePoints, e_Vitoria) {
   } else {
     if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 2); 
     if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2.5); 
+    
+    // CORRIGIDO: Se o evento estiver ativo e a roleta rodada, multiplica os pontos finais obtidos antes de enviar ao banco!
+    if (eventActive && eventMultiplier > 1) {
+      finalCalculatedScore = Math.floor(finalCalculatedScore * eventMultiplier);
+      console.log(`Pontuação multiplicada por ${eventMultiplier}x devido ao Evento Relâmpago!`);
+    }
   }
 
   if (e_Vitoria) {
@@ -771,13 +914,20 @@ function showEndGameModal(isVictory) {
   if(currentLevel === 3) multiplierVal = 2.5;
 
   const baseScore = wordsSolvedCount > 0 ? totalRoundScore : 0;
-  const finalScoreToShow = wordsSolvedCount === 0 ? -15000 : Math.floor(baseScore * multiplierVal);
+  let finalScoreToShow = wordsSolvedCount === 0 ? -15000 : Math.floor(baseScore * multiplierVal);
+
+  // Aplica o multiplicador visual da roleta na tela de fim de jogo
+  if (isVictory && eventActive && eventMultiplier > 1) {
+    finalScoreToShow = Math.floor(finalScoreToShow * eventMultiplier);
+  }
 
   const text = document.createElement("p");
   if (wordsSolvedCount === 0) {
     text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu -15.000 PDL</span>.<br><br>As respostas eram:<br><strong>${targetWords.join(" | ")}</strong>`;
   } else {
-    text.innerHTML = `Você venceu o desafio garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!<br><br>Aguarde o carregamento do próximo nível.`;
+    // Avisa o jogador se o bônus foi computado
+    const msgBonus = (eventActive && eventMultiplier > 1) ? `<br><span style="color:#ff4655; font-weight:bold;">(Bônus de ${eventMultiplier}x da Roleta Aplicado!)</span>` : '';
+    text.innerHTML = `Você venceu o desafio garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!${msgBonus}<br><br>Aguarde o carregamento do próximo nível.`;
   }
 
   const btnContainer = document.createElement("div");

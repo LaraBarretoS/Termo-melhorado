@@ -33,6 +33,7 @@ const listaBordasReais = [
   { id: "silver-border", nome: "Borda Prata" },
   { id: "gold-border", nome: "Borda Ouro" },
   { id: "platinum-border", nome: "Borda Platina" },
+  { id: "diamond-border", nome: "Borda Diamante" }, // CORRIGIDO: Adicionado aqui para aparecer na seleção
   { id: "ascendent-border", nome: "Borda Ascendente" }, 
   { id: "imortal-1-border", nome: "Borda Imortal I" },
   { id: "imortal-2-border", nome: "Borda Imortal II" },
@@ -191,6 +192,7 @@ function selecionarAvatar(nomeAvatar) {
   currentUser.avatar = nomeAvatar;
   localStorage.setItem("user", JSON.stringify(currentUser));
   renderCosmeticsGrid(); 
+  salvarEAtualizarPagina(); // CORRIGIDO: Garante o envio ao servidor e recarregamento imediatamente
 }
 
 // Auxiliar para obter a quantidade máxima de linhas dinâmica do nível ativo
@@ -203,6 +205,7 @@ function selecionarBorda(idBorda) {
   currentUser.border = idBorda;
   localStorage.setItem("user", JSON.stringify(currentUser));
   renderCosmeticsGrid(); 
+  salvarEAtualizarPagina(); // CORRIGIDO: Garante o envio ao servidor e recarregamento imediatamente
 }
 
 async function salvarEAtualizarPagina() {
@@ -664,7 +667,7 @@ function checkWord() {
 
   totalRoundScore += roundPointsGained;
   currentRow++;
-  currentCol = 0;
+  col = 0;
 
   if (boardsData.every(b => b.solved)) {
     if(statusText) statusText.innerText = `Vitória! 🎉 +${totalRoundScore} pts`;

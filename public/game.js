@@ -426,6 +426,7 @@ function checkFlashEvent() {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   
+  // Define 3 janelas de horários fixas no dia para sortear os eventos
   const windows = [
     { startHour: 0, endHour: 7, seedModifier: 11 },
     { startHour: 8, endHour: 15, seedModifier: 22 },
@@ -435,12 +436,13 @@ function checkFlashEvent() {
   let currentActiveEventEnd = null;
 
   windows.forEach(w => {
+    // Sorteia uma hora inicial aleatória dentro do bloco (ex: entre 0h e 5h para o primeiro bloco dar tempo de durar 2h)
     const seed = startOfDay + w.seedModifier;
     const randomOffsetHours = Math.floor(pseudoRandom(seed) * (w.endHour - w.startHour - 1));
     const eventStartHour = w.startHour + randomOffsetHours;
     
     const eventStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eventStartHour, 0, 0);
-    const eventEndDate = new Date(eventStartDate.getTime() + (2 * 60 * 60 * 1000));
+    const eventEndDate = new Date(eventStartDate.getTime() + (2 * 60 * 60 * 1000)); // +2 horas de duração
 
     if (now >= eventStartDate && now < eventEndDate) {
       currentActiveEventEnd = eventEndDate;
@@ -451,6 +453,7 @@ function checkFlashEvent() {
   if (!panel) return;
 
   if (currentActiveEventEnd) {
+    // Ativa o evento
     if (!eventActive) {
       eventActive = true;
       panel.style.display = "block";
@@ -458,6 +461,7 @@ function checkFlashEvent() {
     }
     updateEventCountdown(currentActiveEventEnd);
   } else {
+    // Desativa o evento
     eventActive = false;
     eventMultiplier = 1;
     panel.style.display = "none";
@@ -491,6 +495,7 @@ function resetRouletteUI() {
   const display = document.getElementById("roulette-display");
   const btn = document.getElementById("btn-spin");
   
+  // Limpa o multiplicador ao iniciar um novo evento para o jogador girar de novo
   eventMultiplier = 1; 
   if (display) display.innerHTML = "🎰 ?x MULTIPLICADOR";
   if (btn) {
@@ -512,6 +517,7 @@ function spinRoulette() {
   let counter = 0;
   const options = [2, 3, 5];
   
+  // Efeito visual de rotação rápida da roleta
   const interval = setInterval(() => {
     const tempOpt = options[Math.floor(Math.random() * options.length)];
     display.innerText = `🎰 ${tempOpt}x MULTIPLICADOR`;
@@ -520,6 +526,7 @@ function spinRoulette() {
     if (counter > 15) {
       clearInterval(interval);
       
+      // Definição das chances: 5x (10%), 3x (35%), 2x (55%)
       const rand = Math.random() * 100;
       if (rand < 10) {
         eventMultiplier = 5;
@@ -671,14 +678,10 @@ async function startNewGame() {
   boardsData = [];
   if(statusText) statusText.innerText = "";
   
-  // Proteção estrutural: garante que o nível e o modo sejam numéricos válidos
-  if (!currentLevel || currentLevel < 1 || currentLevel > 3) {
-    currentLevel = 1;
-  }
-
   if (currentLevel === 1) currentMode = 1;
   else if (currentLevel === 2) currentMode = 2;
   else if (currentLevel === 3) currentMode = 4;
+  else { currentLevel = 1; currentMode = 1; }
 
   const currentMaxRows = getMaxRowsForCurrentLevel();
 
@@ -689,7 +692,7 @@ async function startNewGame() {
 
   updatePointsDisplay();
   await loadRanking();
-  checkFlashEvent();
+  checkFlashEvent(); // Sincroniza o estado do evento ao iniciar nova partida
 
   for (let b = 0; b < currentMode; b++) {
     try {
@@ -800,9 +803,10 @@ function checkWord() {
   currentCol = 0;
 
   if (boardsData.every(b => b.solved)) {
+    // CORRIGIDO: Mostra os pontos finais multiplicados na string de vitória se houver evento ativo
     let scoreCalculado = totalRoundScore;
-    if (currentLevel === 2) scoreCalculado = Math.floor(scoreCalculado * 1); 
-    if (currentLevel === 3) scoreCalculado = Math.floor(scoreCalculado * 2); 
+    if (currentLevel === 2) scoreCalculado = Math.floor(scoreCalculado * 2); 
+    if (currentLevel === 3) scoreCalculado = Math.floor(scoreCalculado * 2.5); 
     if (eventActive && eventMultiplier > 1) scoreCalculado = Math.floor(scoreCalculado * eventMultiplier);
 
     if(statusText) statusText.innerText = `Vitória! 🎉 +${scoreCalculado.toLocaleString()} pts`;
@@ -814,13 +818,7 @@ function checkWord() {
 
   if (currentRow === currentMaxRows) {
     if(statusText) {
-      const palavrasNaoResolvidas = [];
-      for (let b = 0; b < currentMode; b++) {
-        if (!boardsData[b].solved) {
-          palavrasNaoResolvidas.push(targetWords[b]);
-        }
-      }
-      statusText.innerText = `Fim de jogo! Resposta: ${palavrasNaoResolvidas.join(" | ")}`;
+      statusText.innerText = `Fim de jogo! Resposta: ${targetWords.join(" | ")}`;
     }
     saveScore(0, false); 
     showEndGameModal(false);
@@ -850,9 +848,10 @@ async function saveScore(scorePoints, e_Vitoria) {
   if (wordsSolvedCount === 0) {
     finalCalculatedScore = -15000;
   } else {
-    if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 1); 
-    if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2); 
+    if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 2); 
+    if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2.5); 
     
+    // CORRIGIDO: Se o evento estiver ativo e a roleta rodada, multiplica os pontos finais obtidos antes de enviar ao banco!
     if (eventActive && eventMultiplier > 1) {
       finalCalculatedScore = Math.floor(finalCalculatedScore * eventMultiplier);
       console.log(`Pontuação multiplicada por ${eventMultiplier}x devido ao Evento Relâmpago!`);
@@ -909,37 +908,106 @@ function showEndGameModal(isVictory) {
   const title = document.createElement("h2");
   title.innerText = isVictory ? "Sensacional! 🎉" : "Derrota Comp! 😢";
 
-  const message = document.createElement("p");
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
-  
-  if (isVictory) {
-    message.innerText = `Você resolveu todos os tabuleiros do round com sucesso!`;
-  } else {
-    const erradas = [];
-    for (let b = 0; b < currentMode; b++) {
-      if (!boardsData[b].solved) erradas.push(targetWords[b]);
-    }
-    message.innerText = `Não foi dessa vez. Você acertou ${wordsSolvedCount} tabuleiro(s).\nAs palavras corretas eram: ${erradas.join(" | ")}`;
+  let multiplierVal = 1;
+  if(currentLevel === 2) multiplierVal = 2;
+  if(currentLevel === 3) multiplierVal = 2.5;
+
+  const baseScore = wordsSolvedCount > 0 ? totalRoundScore : 0;
+  let finalScoreToShow = wordsSolvedCount === 0 ? -15000 : Math.floor(baseScore * multiplierVal);
+
+  // Aplica o multiplicador visual da roleta na tela de fim de jogo
+  if (isVictory && eventActive && eventMultiplier > 1) {
+    finalScoreToShow = Math.floor(finalScoreToShow * eventMultiplier);
   }
 
-  const closeBtn = document.createElement("button");
-  closeBtn.innerText = "Jogar Novamente";
-  closeBtn.className = "btn-spin"; 
-  closeBtn.style.marginTop = "15px";
-  closeBtn.onclick = () => {
-    modal.remove();
-    startNewGame();
-  };
+  const text = document.createElement("p");
+  if (wordsSolvedCount === 0) {
+    text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu -15.000 PDL</span>.<br><br>As respostas eram:<br><strong>${targetWords.join(" | ")}</strong>`;
+  } else {
+    // Avisa o jogador se o bônus foi computado
+    const msgBonus = (eventActive && eventMultiplier > 1) ? `<br><span style="color:#ff4655; font-weight:bold;">(Bônus de ${eventMultiplier}x da Roleta Aplicado!)</span>` : '';
+    text.innerHTML = `Você venceu o desafio garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!${msgBonus}<br><br>Aguarde o carregamento do próximo nível.`;
+  }
 
-  content.appendChild(title);
-  content.appendChild(message);
-  content.appendChild(closeBtn);
+  const btnContainer = document.createElement("div");
+  btnContainer.className = "modal-buttons";
+
+  const btnReset = document.createElement("button");
+  btnReset.innerText = "Avançar Próxima Partida";
+  btnReset.className = "m-btn m-btn-next";
+  btnReset.addEventListener("click", () => {
+    modal.remove();
+    startNewGame(); 
+  });
+  btnContainer.appendChild(btnReset);
+
   modal.appendChild(content);
+  content.appendChild(title);
+  content.appendChild(text);
+  content.appendChild(btnContainer);
   document.body.appendChild(modal);
 }
 
-// Inicialização automática protegida ao carregar a página
-document.addEventListener("DOMContentLoaded", () => {
+function logout() {
+  localStorage.removeItem("user");
+  window.location.href = "/login";
+}
+
+
+// ==========================================================================
+// BLOCO: SISTEMA INTERATIVO DE CONQUISTAS (ACHIEVEMENTS MODAL)
+// ==========================================================================
+function openAchievementsModal() {
+  const modal = document.getElementById("achievements-modal");
+  if (!modal) return;
+  modal.style.display = "flex";
+  
+  const pts = Number(currentUser.points) || 0;
+  
+  const elosConfig = [
+    { id: "ach-ferro", min: 0 }, 
+    { id: "ach-bronze", min: 10000 }, 
+    { id: "ach-prata", min: 50000 },
+    { id: "ach-ouro", min: 150000 }, 
+    { id: "ach-platina", min: 500000 }, 
+    { id: "ach-diamante", min: 1500000 }, 
+    { id: "ach-ascendente", min: 3000000 }, 
+    { id: "ach-imortal1", min: 5000000 }, 
+    { id: "ach-imortal2", min: 7000000 },
+    { id: "ach-imortal3", min: 9000000 }, 
+    { id: "ach-radiante", min: 12000000 }
+  ];
+
+  elosConfig.forEach(elo => {
+    const card = document.getElementById(elo.id);
+    if (card) {
+      if (pts >= elo.min) {
+        card.classList.add("unlocked");
+        const statusEl = card.querySelector(".ach-status");
+        if (statusEl) statusEl.textContent = "✅";
+      } else {
+        card.classList.remove("unlocked");
+        const statusEl = card.querySelector(".ach-status");
+        if (statusEl) statusEl.textContent = "🔒";
+      }
+    }
+  });
+}
+
+function closeAchievementsModal() {
+  const modal = document.getElementById("achievements-modal");
+  if (modal) modal.style.display = "none";
+}
+
+
+// ==========================================================================
+// BLOCO: INICIALIZAÇÃO DA SESSÃO AO CARREGAR A PÁGINA
+// ==========================================================================
+async function init() {
   checkUserSession();
-  startNewGame();
-});
+  await syncUserWithServer(); 
+  await startNewGame();
+}
+
+init();

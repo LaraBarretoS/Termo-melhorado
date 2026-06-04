@@ -415,7 +415,7 @@ async function loadRanking() {
 
 
 // ==========================================================================
-// BLOCO NOVO: SISTEMA DE EVENTO RELÂMPAGO E ROLETA (3X AO DIA, DURAÇÃO 2H)
+// BLOCO: SISTEMA DE EVENTO RELÂMPAGO E ROLETA (BLINDADO CONTRA ERROS DE HORA)
 // ==========================================================================
 function pseudoRandom(seed) {
   let x = Math.sin(seed) * 10000;
@@ -424,48 +424,52 @@ function pseudoRandom(seed) {
 
 function checkFlashEvent() {
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   
-  // Define 3 janelas de horários fixas no dia para sortear os eventos
+  // Janelas expandidas de 4 horas para garantir tolerância de rede e fuso horário
   const windows = [
-    { startHour: 0, endHour: 7, seedModifier: 11 },
-    { startHour: 8, endHour: 15, seedModifier: 22 },
-    { startHour: 16, endHour: 23, seedModifier: 33 }
+    { startHour: 0, endHour: 4 },   // Das 00:00 às 04:00
+    { startHour: 8, endHour: 12 },  // Das 08:00 às 12:00
+    { startHour: 16, endHour: 20 }  // Das 16:00 às 20:00 (Fica ativo durante toda a tarde/noite)
   ];
 
   let currentActiveEventEnd = null;
 
   windows.forEach(w => {
-    // Sorteia uma hora inicial aleatória dentro do bloco (ex: entre 0h e 5h para o primeiro bloco dar tempo de durar 2h)
-    const seed = startOfDay + w.seedModifier;
-    const randomOffsetHours = Math.floor(pseudoRandom(seed) * (w.endHour - w.startHour - 1));
-    const eventStartHour = w.startHour + randomOffsetHours;
-    
-    const eventStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eventStartHour, 0, 0);
-    const eventEndDate = new Date(eventStartDate.getTime() + (2 * 60 * 60 * 1000)); // +2 horas de duração
+    // Força a criação das datas baseadas rigorosamente no ano, mês e dia locais atuais
+    const eventStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), w.startHour, 0, 0);
+    const eventEndDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), w.endHour, 0, 0);
 
-    if (now >= eventStartDate && now < eventEndDate) {
+    // Validação de segurança para conferir se a hora atual cai no range
+    if (now.getTime() >= eventStartDate.getTime() && now.getTime() < eventEndDate.getTime()) {
       currentActiveEventEnd = eventEndDate;
     }
   });
 
   const panel = document.getElementById("event-panel");
-  if (!panel) return;
+  
+  if (!panel) {
+    console.error("Erro Crítico: O id='event-panel' não existe no seu arquivo index.html");
+    return;
+  }
 
   if (currentActiveEventEnd) {
-    // Ativa o evento
+    // Força o painel a aparecer usando a propriedade correta de bloco
+    panel.style.setProperty("display", "block", "important");
+    
     if (!eventActive) {
       eventActive = true;
-      panel.style.display = "block";
       resetRouletteUI();
     }
     updateEventCountdown(currentActiveEventEnd);
   } else {
-    // Desativa o evento
+    // Desativa se estiver fora do horário regulamentar das janelas
     eventActive = false;
     eventMultiplier = 1;
     panel.style.display = "none";
-    if (timerInterval) clearInterval(timerInterval);
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
   }
 }
 
@@ -473,12 +477,16 @@ function updateEventCountdown(endTime) {
   const timerEl = document.getElementById("event-timer");
   if (!timerEl) return;
 
-  if (timerInterval) clearInterval(timerInterval);
+  // Evita duplicação de loops que travam ou congelam a contagem visual
+  if (timerInterval) return;
 
   timerInterval = setInterval(() => {
     const diff = endTime.getTime() - new Date().getTime();
+    
     if (diff <= 0) {
       clearInterval(timerInterval);
+      timerInterval = null;
+      eventActive = false;
       checkFlashEvent();
       return;
     }
@@ -495,7 +503,6 @@ function resetRouletteUI() {
   const display = document.getElementById("roulette-display");
   const btn = document.getElementById("btn-spin");
   
-  // Limpa o multiplicador ao iniciar um novo evento para o jogador girar de novo
   eventMultiplier = 1; 
   if (display) display.innerHTML = "🎰 ?x MULTIPLICADOR";
   if (btn) {
@@ -517,7 +524,6 @@ function spinRoulette() {
   let counter = 0;
   const options = [2, 3, 5];
   
-  // Efeito visual de rotação rápida da roleta
   const interval = setInterval(() => {
     const tempOpt = options[Math.floor(Math.random() * options.length)];
     display.innerText = `🎰 ${tempOpt}x MULTIPLICADOR`;
@@ -526,7 +532,6 @@ function spinRoulette() {
     if (counter > 15) {
       clearInterval(interval);
       
-      // Definição das chances: 5x (10%), 3x (35%), 2x (55%)
       const rand = Math.random() * 100;
       if (rand < 10) {
         eventMultiplier = 5;
@@ -542,6 +547,8 @@ function spinRoulette() {
   }, 100);
 }
 
+// Executa a checagem em background a cada 5 segundos de forma leve
+setInterval(checkFlashEvent, 5000);
 
 // ==========================================================================
 // BLOCO: TECLADO VIRTUAL DO JOGO

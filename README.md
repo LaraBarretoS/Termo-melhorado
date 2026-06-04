@@ -6,6 +6,14 @@ Uma versão aprimorada, interativa e competitiva do clássico jogo **Termo (Word
 
 ---
 
+## 📸 Demonstração da Interface
+
+Aqui está uma prévia do jogo em ação, mostrando a transição de níveis, o teclado virtual e o painel competitivo:
+
+![Demonstração do Termo Melhorado](SUA_URL_DO_GIF_AQUI.gif)
+
+---
+
 ## 🚀 Funcionalidades Principais
 
 * **Modo Ranqueado de 3 Níveis:**

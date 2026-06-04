@@ -899,7 +899,7 @@ async function saveScore(scorePoints, e_Vitoria) {
 
 
 // ==========================================================================
-// BLOCO: INTERFACE DE TELA DE VITÓRIA OU DERROTA (MODAL OVERLAY)
+// BLOCO: INTERFACE DE TELA DE VITÓRIA OU DERROTA (MODAL OVERLAY - PONTOS ATUALIZADOS)
 // ==========================================================================
 function showEndGameModal(isVictory) {
   const oldModal = document.getElementById("custom-modal");
@@ -916,12 +916,21 @@ function showEndGameModal(isVictory) {
   title.innerText = isVictory ? "Sensacional! 🎉" : "Derrota Comp! 😢";
 
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
+  
+  // 1. Configura os Multiplicadores de Vitória e as Punições de Derrota por Nível
   let multiplierVal = 1;
-  if(currentLevel === 2) multiplierVal = 2;
-  if(currentLevel === 3) multiplierVal = 5;
+  let pontosPerdidos = -15000; // Padrão Level 1
+
+  if (currentLevel === 2) {
+    multiplierVal = 2;
+    pontosPerdidos = -30000; // Level 2
+  } else if (currentLevel === 3) {
+    multiplierVal = 5;
+    pontosPerdidos = -50000; // Level 3
+  }
 
   const baseScore = wordsSolvedCount > 0 ? totalRoundScore : 0;
-  let finalScoreToShow = wordsSolvedCount === 0 ? -15000 : Math.floor(baseScore * multiplierVal);
+  let finalScoreToShow = wordsSolvedCount === 0 ? pontosPerdidos : Math.floor(baseScore * multiplierVal);
 
   // Aplica o multiplicador visual da roleta na tela de fim de jogo
   if (isVictory && eventActive && eventMultiplier > 1) {
@@ -931,12 +940,13 @@ function showEndGameModal(isVictory) {
   const text = document.createElement("p");
   
   if (isVictory) {
-    // Caso de Vitória
+    // Remove a flag de jogo ativo já que ele venceu limpo
+    localStorage.removeItem("gameInProgress");
+    
     const msgBonus = (eventActive && eventMultiplier > 1) ? `<br><span style="color:#ff4655; font-weight:bold;">(Bônus de ${eventMultiplier}x da Roleta Aplicado!)</span>` : '';
     text.innerHTML = `Você venceu o desafio garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!${msgBonus}<br><br>Aguarde o carregamento do próximo nível.`;
   } else {
-    // Caso de Derrota (Sumiu todos os palpites)
-    // Filtra dinamicamente quais palavras o usuário NÃO conseguiu adivinhar (serve para os 3 níveis)
+    // Filtra dinamicamente quais palavras o usuário NÃO conseguiu adivinhar
     const palavrasNaoResolvidas = [];
     for (let b = 0; b < currentMode; b++) {
       if (!boardsData[b].solved) {
@@ -946,7 +956,7 @@ function showEndGameModal(isVictory) {
     const respostaFinal = palavrasNaoResolvidas.join(" | ");
 
     if (wordsSolvedCount === 0) {
-      text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu -15.000 PDL</span>.<br><br>As respostas eram:<br><strong>${respostaFinal}</strong>`;
+      text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu ${finalScoreToShow.toLocaleString()} PDL</span>.<br><br>As respostas eram:<br><strong>${respostaFinal}</strong>`;
     } else {
       text.innerHTML = `Não foi dessa vez! Você acertou ${wordsSolvedCount} tabuleiro(s), mas esgotou suas tentativas.<br><br>As palavras que faltaram eram:<br><strong style="color:#ff4655; font-size: 16px;">${respostaFinal}</strong>`;
     }
@@ -971,10 +981,6 @@ function showEndGameModal(isVictory) {
   document.body.appendChild(modal);
 }
 
-function logout() {
-  localStorage.removeItem("user");
-  window.location.href = "/login";
-}
 
 // ==========================================================================
 // BLOCO: SISTEMA INTERATIVO DE CONQUISTAS (ACHIEVEMENTS MODAL)
@@ -1020,6 +1026,69 @@ function closeAchievementsModal() {
   const modal = document.getElementById("achievements-modal");
   if (modal) modal.style.display = "none";
 }
+
+// ==========================================================================
+// BLOCO: SISTEMA ANTI-DESISTÊNCIA (CONTROLE DE REINÍCIO/F5)
+// ==========================================================================
+
+// Chama isso sempre que iniciar uma nova partida para marcar que o jogo começou
+function registrarInicioDePartida() {
+  const statusJogo = {
+    inProgress: true,
+    level: currentLevel || 1
+  };
+  localStorage.setItem("gameInProgress", JSON.stringify(statusJogo));
+}
+
+// Verifica se o jogador abandonou a partida anterior ao carregar a página
+async function verificarPenalidadeAbandono() {
+  const jogoPendente = localStorage.getItem("gameInProgress");
+  if (!jogoPendente || !currentUser) return;
+
+  const dadosJogo = JSON.parse(jogoPendente);
+  
+  if (dadosJogo.inProgress) {
+    let punicaoAbandono = -5000; // Padrão Nível 1
+    
+    if (dadosJogo.level === 2) {
+      punicaoAbandono = -40000; // Nível 2
+    } else if (dadosJogo.level === 3) {
+      punicaoAbandono = -100000; // Nível 3
+    }
+
+    // Aplica a perda de pontos no objeto local
+    currentUser.points = (Number(currentUser.points) || 0) + punicaoAbandono;
+    localStorage.setItem("user", JSON.stringify(currentUser));
+    
+    // Alerta o jogador sobre a punição por abuso de F5
+    alert(`🚨 PENALIDADE DE ABANDONO! Você recarregou ou saiu da página durante uma partida ativa do Nível ${dadosJogo.level}.\nPontos perdidos: ${punicaoAbandono.toLocaleString()} PDL.`);
+    
+    // Envia a nova pontuação atualizada para salvar no banco de dados do seu backend
+    try {
+      await fetch("/score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          username: currentUser.username, 
+          score: punicaoAbandono, // Envia o valor negativo para somar decrementando no banco
+          wordsSolved: 0 
+        })
+      });
+    } catch (e) {
+      console.error("Erro ao sincronizar punição com o servidor:", e);
+    }
+
+    // Limpa a flag para não punir duas vezes seguidas
+    localStorage.removeItem("gameInProgress");
+    updatePointsDisplay();
+  }
+}
+
+// Monitora se o usuário está fechando ou atualizando a aba
+window.addEventListener("beforeunload", () => {
+  // Se o jogo está rolando e ele não ganhou/perdeu ainda, a flag 'gameInProgress' continua como true
+  // O navegador salva e aplica a punição no próximo loading.
+});
 
 
 // ==========================================================================

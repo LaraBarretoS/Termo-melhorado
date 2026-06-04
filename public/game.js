@@ -426,7 +426,6 @@ function checkFlashEvent() {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   
-  // Define 3 janelas de horários fixas no dia para sortear os eventos
   const windows = [
     { startHour: 0, endHour: 7, seedModifier: 11 },
     { startHour: 8, endHour: 15, seedModifier: 22 },
@@ -436,13 +435,12 @@ function checkFlashEvent() {
   let currentActiveEventEnd = null;
 
   windows.forEach(w => {
-    // Sorteia uma hora inicial aleatória dentro do bloco (ex: entre 0h e 5h para o primeiro bloco dar tempo de durar 2h)
     const seed = startOfDay + w.seedModifier;
     const randomOffsetHours = Math.floor(pseudoRandom(seed) * (w.endHour - w.startHour - 1));
     const eventStartHour = w.startHour + randomOffsetHours;
     
     const eventStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eventStartHour, 0, 0);
-    const eventEndDate = new Date(eventStartDate.getTime() + (2 * 60 * 60 * 1000)); // +2 horas de duração
+    const eventEndDate = new Date(eventStartDate.getTime() + (2 * 60 * 60 * 1000));
 
     if (now >= eventStartDate && now < eventEndDate) {
       currentActiveEventEnd = eventEndDate;
@@ -453,7 +451,6 @@ function checkFlashEvent() {
   if (!panel) return;
 
   if (currentActiveEventEnd) {
-    // Ativa o evento
     if (!eventActive) {
       eventActive = true;
       panel.style.display = "block";
@@ -461,7 +458,6 @@ function checkFlashEvent() {
     }
     updateEventCountdown(currentActiveEventEnd);
   } else {
-    // Desativa o evento
     eventActive = false;
     eventMultiplier = 1;
     panel.style.display = "none";
@@ -495,7 +491,6 @@ function resetRouletteUI() {
   const display = document.getElementById("roulette-display");
   const btn = document.getElementById("btn-spin");
   
-  // Limpa o multiplicador ao iniciar um novo evento para o jogador girar de novo
   eventMultiplier = 1; 
   if (display) display.innerHTML = "🎰 ?x MULTIPLICADOR";
   if (btn) {
@@ -517,7 +512,6 @@ function spinRoulette() {
   let counter = 0;
   const options = [2, 3, 5];
   
-  // Efeito visual de rotação rápida da roleta
   const interval = setInterval(() => {
     const tempOpt = options[Math.floor(Math.random() * options.length)];
     display.innerText = `🎰 ${tempOpt}x MULTIPLICADOR`;
@@ -526,7 +520,6 @@ function spinRoulette() {
     if (counter > 15) {
       clearInterval(interval);
       
-      // Definição das chances: 5x (10%), 3x (35%), 2x (55%)
       const rand = Math.random() * 100;
       if (rand < 10) {
         eventMultiplier = 5;
@@ -678,10 +671,14 @@ async function startNewGame() {
   boardsData = [];
   if(statusText) statusText.innerText = "";
   
+  // Proteção estrutural: garante que o nível e o modo sejam numéricos válidos
+  if (!currentLevel || currentLevel < 1 || currentLevel > 3) {
+    currentLevel = 1;
+  }
+
   if (currentLevel === 1) currentMode = 1;
   else if (currentLevel === 2) currentMode = 2;
   else if (currentLevel === 3) currentMode = 4;
-  else { currentLevel = 1; currentMode = 1; }
 
   const currentMaxRows = getMaxRowsForCurrentLevel();
 
@@ -692,7 +689,7 @@ async function startNewGame() {
 
   updatePointsDisplay();
   await loadRanking();
-  checkFlashEvent(); // Sincroniza o estado do evento ao iniciar nova partida
+  checkFlashEvent();
 
   for (let b = 0; b < currentMode; b++) {
     try {
@@ -804,7 +801,6 @@ function checkWord() {
 
   if (boardsData.every(b => b.solved)) {
     let scoreCalculado = totalRoundScore;
-    // Multiplicadores ajustados: Nível 2 (Dueto) = 1x (Fica igual ao solo), Nível 3 (Quarteto) = 2x
     if (currentLevel === 2) scoreCalculado = Math.floor(scoreCalculado * 1); 
     if (currentLevel === 3) scoreCalculado = Math.floor(scoreCalculado * 2); 
     if (eventActive && eventMultiplier > 1) scoreCalculado = Math.floor(scoreCalculado * eventMultiplier);
@@ -818,7 +814,6 @@ function checkWord() {
 
   if (currentRow === currentMaxRows) {
     if(statusText) {
-      // CORRIGIDO: Coleta e formata as palavras dinamicamente com base nos quadros não resolvidos
       const palavrasNaoResolvidas = [];
       for (let b = 0; b < currentMode; b++) {
         if (!boardsData[b].solved) {
@@ -855,7 +850,6 @@ async function saveScore(scorePoints, e_Vitoria) {
   if (wordsSolvedCount === 0) {
     finalCalculatedScore = -15000;
   } else {
-    // Multiplicadores ajustados: Nível 2 (Dueto) = 1x, Nível 3 (Quarteto) = 2x
     if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 1); 
     if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2); 
     
@@ -921,7 +915,6 @@ function showEndGameModal(isVictory) {
   if (isVictory) {
     message.innerText = `Você resolveu todos os tabuleiros do round com sucesso!`;
   } else {
-    // Exibe de forma limpa as palavras corretas que o jogador errou dentro do modal também
     const erradas = [];
     for (let b = 0; b < currentMode; b++) {
       if (!boardsData[b].solved) erradas.push(targetWords[b]);
@@ -944,3 +937,9 @@ function showEndGameModal(isVictory) {
   modal.appendChild(content);
   document.body.appendChild(modal);
 }
+
+// Inicialização automática protegida ao carregar a página
+document.addEventListener("DOMContentLoaded", () => {
+  checkUserSession();
+  startNewGame();
+});

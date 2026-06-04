@@ -282,7 +282,10 @@ async function syncUserWithServer() {
 // BLOCO: ATUALIZAÇÃO VISUAL DA INTERFACE DO PERFIL (PONTOS, ELO, FOTO, BORDA)
 // ==========================================================================
 function updatePointsDisplay() {
-  if (!currentUser) return;
+  const userSession = localStorage.getItem("user");
+  if (!userSession) return;
+  
+  currentUser = JSON.parse(userSession);
   let pts = Number(currentUser.points) || 0;
   
   const pointsEl = document.getElementById("profile-points");
@@ -291,9 +294,10 @@ function updatePointsDisplay() {
   const borderImgEl = document.getElementById("profile-border-img");
   
   const eloAtual = obterElo(pts);
+  const nomeImgElo = formatarNomeImg(eloAtual);
 
   if (pointsEl) {
-    pointsEl.innerHTML = `${pts.toLocaleString()} pts <br><span class="elo-tag elo-${formatarNomeImg(eloAtual)}" style="font-weight:bold; font-size:13px; color: #ff4655;">Elo: ${eloAtual}</span>`;
+    pointsEl.innerHTML = `${pts.toLocaleString()} pts <br><span class="elo-tag elo-${nomeImgElo}" style="font-weight:bold; font-size:13px; color: #ff4655;">Elo: ${eloAtual}</span>`;
   }
 
   if (avatarImgEl) {
@@ -313,9 +317,13 @@ function updatePointsDisplay() {
   }
 
   if (eloIconEl) {
-    eloIconEl.src = `assets/elos/${formatarNomeImg(eloAtual)}.png`;
+    eloIconEl.src = `assets/elos/${nomeImgElo}.png`;
     eloIconEl.alt = `Elo ${eloAtual}`;
-    eloIconEl.style.display = "block"; 
+    
+    eloIconEl.onload = function() {
+      this.style.display = "block";
+    };
+    
     eloIconEl.onerror = function() {
       this.style.display = "none"; 
     };
@@ -899,7 +907,7 @@ async function saveScore(scorePoints, e_Vitoria) {
 
 
 // ==========================================================================
-// BLOCO: INTERFACE DE TELA DE VITÓRIA OU DERROTA (MODAL OVERLAY - PONTOS ATUALIZADOS)
+// BLOCO: INTERFACE DE TELA DE VITÓRIA OU DERROTA (MODAL OVERLAY)
 // ==========================================================================
 function showEndGameModal(isVictory) {
   const oldModal = document.getElementById("custom-modal");
@@ -917,7 +925,7 @@ function showEndGameModal(isVictory) {
 
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
   
-  // 1. Configura os Multiplicadores de Vitória e as Punições de Derrota por Nível
+  // Define os Multiplicadores de Vitória e as Punições de Derrota por Nível
   let multiplierVal = 1;
   let pontosPerdidos = -15000; // Padrão Level 1
 
@@ -932,7 +940,7 @@ function showEndGameModal(isVictory) {
   const baseScore = wordsSolvedCount > 0 ? totalRoundScore : 0;
   let finalScoreToShow = wordsSolvedCount === 0 ? pontosPerdidos : Math.floor(baseScore * multiplierVal);
 
-  // Aplica o multiplicador visual da roleta na tela de fim de jogo
+  // Aplica o multiplicador da roleta na tela de fim de jogo se for vitória
   if (isVictory && eventActive && eventMultiplier > 1) {
     finalScoreToShow = Math.floor(finalScoreToShow * eventMultiplier);
   }
@@ -940,13 +948,12 @@ function showEndGameModal(isVictory) {
   const text = document.createElement("p");
   
   if (isVictory) {
-    // Remove a flag de jogo ativo já que ele venceu limpo
+    // Se venceu, limpa o estado de jogo ativo (não será punido por F5)
     localStorage.removeItem("gameInProgress");
-    
     const msgBonus = (eventActive && eventMultiplier > 1) ? `<br><span style="color:#ff4655; font-weight:bold;">(Bônus de ${eventMultiplier}x da Roleta Aplicado!)</span>` : '';
     text.innerHTML = `Você venceu o desafio garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!${msgBonus}<br><br>Aguarde o carregamento do próximo nível.`;
   } else {
-    // Filtra dinamicamente quais palavras o usuário NÃO conseguiu adivinhar
+    // Filtra quais palavras o usuário NÃO conseguiu adivinhar
     const palavrasNaoResolvidas = [];
     for (let b = 0; b < currentMode; b++) {
       if (!boardsData[b].solved) {
@@ -958,7 +965,7 @@ function showEndGameModal(isVictory) {
     if (wordsSolvedCount === 0) {
       text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu ${finalScoreToShow.toLocaleString()} PDL</span>.<br><br>As respostas eram:<br><strong>${respostaFinal}</strong>`;
     } else {
-      text.innerHTML = `Não foi dessa vez! Você acertou ${wordsSolvedCount} tabuleiro(s), mas esgotou suas tentativas.<br><br>As palavras que faltaram eram:<br><strong style="color:#ff4655; font-size: 16px;">${respostaFinal}</strong>`;
+      text.innerHTML = `Não foi dessa vez! Você acertou ${wordsSolvedCount} tabuleiro(s), mas esgotou suas tentativas.<br><span style="color:#ff4655; font-weight:bold;">Perdeu ${pontosPerdidos.toLocaleString()} PDL</span>.<br><br>As palavras que faltaram eram:<br><strong style="color:#ff4655; font-size: 16px;">${respostaFinal}</strong>`;
     }
   }
 
@@ -1092,12 +1099,11 @@ window.addEventListener("beforeunload", () => {
 
 
 // ==========================================================================
-// BLOCO: INICIALIZAÇÃO DA SESSÃO AO CARREGAR A PÁGINA
+// BLOCO: INICIALIZAÇÃO DO JOGO (DOM CONTENT LOADED)
 // ==========================================================================
-async function init() {
+document.addEventListener("DOMContentLoaded", async () => {
   checkUserSession();
-  await syncUserWithServer(); 
-  await startNewGame();
-}
-
-init();
+  await verificarPenalidadeAbandono(); // Verifica se houve F5 abusivo
+  checkFlashEvent();                   // Ativa o evento relâmpago
+  startNewGame();                     // Inicia a criação das telas
+});

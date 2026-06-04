@@ -26,13 +26,3 @@ O projeto foi construído utilizando tecnologias modernas e leves para garantir 
 * **Front-end:** HTML5, CSS3 (Variáveis nativas para sistema de temas) e JavaScript Assíncrono (Vanilla JS).
 * **Back-end:** Node.js com Express para gerenciamento de rotas, controle de sessão do usuário e sincronização de dados.
 * **Hospedagem:** [Render](https://render.com/)
-
----
-
-## 📦 Como rodar o projeto localmente
-
-Se você quiser baixar e testar o projeto no seu computador, siga os passos abaixo:
-
-1. **Clone o repositório:**
-   ```bash
-   git clone [https://github.com/SEU-USUARIO/NOME-DO-REPOSITORIO.git](https://github.com/SEU-USUARIO/NOME-DO-REPOSITORIO.git)

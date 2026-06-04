@@ -8,7 +8,7 @@ Uma versão aprimorada, interativa e competitiva do clássico jogo **Termo (Word
 
 ## 📸 Demonstração da Interface
 
-![Demonstração do Termo Melhorado](SUA_URL_DO_GIF_AQUI.gif)
+![Demonstração do Termo Melhorado](Termo Clone - Opera 2026-06-04 16-57-43.gif)
 
 ---
 

@@ -806,7 +806,7 @@ function checkWord() {
     // CORRIGIDO: Mostra os pontos finais multiplicados na string de vitória se houver evento ativo
     let scoreCalculado = totalRoundScore;
     if (currentLevel === 2) scoreCalculado = Math.floor(scoreCalculado * 2); 
-    if (currentLevel === 3) scoreCalculado = Math.floor(scoreCalculado * 2.5); 
+    if (currentLevel === 3) scoreCalculado = Math.floor(scoreCalculado * 5); 
     if (eventActive && eventMultiplier > 1) scoreCalculado = Math.floor(scoreCalculado * eventMultiplier);
 
     if(statusText) statusText.innerText = `Vitória! 🎉 +${scoreCalculado.toLocaleString()} pts`;
@@ -849,7 +849,7 @@ async function saveScore(scorePoints, e_Vitoria) {
     finalCalculatedScore = -15000;
   } else {
     if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 2); 
-    if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 2.5); 
+    if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 5); 
     
     // CORRIGIDO: Se o evento estiver ativo e a roleta rodada, multiplica os pontos finais obtidos antes de enviar ao banco!
     if (eventActive && eventMultiplier > 1) {
@@ -911,7 +911,7 @@ function showEndGameModal(isVictory) {
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
   let multiplierVal = 1;
   if(currentLevel === 2) multiplierVal = 2;
-  if(currentLevel === 3) multiplierVal = 2.5;
+  if(currentLevel === 3) multiplierVal = 5;
 
   const baseScore = wordsSolvedCount > 0 ? totalRoundScore : 0;
   let finalScoreToShow = wordsSolvedCount === 0 ? -15000 : Math.floor(baseScore * multiplierVal);
@@ -922,12 +922,27 @@ function showEndGameModal(isVictory) {
   }
 
   const text = document.createElement("p");
-  if (wordsSolvedCount === 0) {
-    text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu -15.000 PDL</span>.<br><br>As respostas eram:<br><strong>${targetWords.join(" | ")}</strong>`;
-  } else {
-    // Avisa o jogador se o bônus foi computado
+  
+  if (isVictory) {
+    // Caso de Vitória
     const msgBonus = (eventActive && eventMultiplier > 1) ? `<br><span style="color:#ff4655; font-weight:bold;">(Bônus de ${eventMultiplier}x da Roleta Aplicado!)</span>` : '';
     text.innerHTML = `Você venceu o desafio garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!${msgBonus}<br><br>Aguarde o carregamento do próximo nível.`;
+  } else {
+    // Caso de Derrota (Sumiu todos os palpites)
+    // Filtra dinamicamente quais palavras o usuário NÃO conseguiu adivinhar (serve para os 3 níveis)
+    const palavrasNaoResolvidas = [];
+    for (let b = 0; b < currentMode; b++) {
+      if (!boardsData[b].solved) {
+        palavrasNaoResolvidas.push(targetWords[b]);
+      }
+    }
+    const respostaFinal = palavrasNaoResolvidas.join(" | ");
+
+    if (wordsSolvedCount === 0) {
+      text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu -15.000 PDL</span>.<br><br>As respostas eram:<br><strong>${respostaFinal}</strong>`;
+    } else {
+      text.innerHTML = `Não foi dessa vez! Você acertou ${wordsSolvedCount} tabuleiro(s), mas esgotou suas tentativas.<br><br>As palavras que faltaram eram:<br><strong style="color:#ff4655; font-size: 16px;">${respostaFinal}</strong>`;
+    }
   }
 
   const btnContainer = document.createElement("div");
@@ -953,7 +968,6 @@ function logout() {
   localStorage.removeItem("user");
   window.location.href = "/login";
 }
-
 
 // ==========================================================================
 // BLOCO: SISTEMA INTERATIVO DE CONQUISTAS (ACHIEVEMENTS MODAL)

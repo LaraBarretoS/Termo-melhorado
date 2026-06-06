@@ -83,7 +83,7 @@ function formatarNomeImg(nomeElo) {
 
 
 // ==========================================================================
-// BLOCO: NOVO POP-UP INTERATIVO DE COSMÉTICOS (LOJA / MODAL)
+// BLOCO: POP-UP INTERATIVO DE COSMÉTICOS (LOJA / MODAL)
 // ==========================================================================
 function openCosmeticsModal() {
   const modal = document.getElementById("cosmetics-modal");
@@ -433,21 +433,18 @@ function pseudoRandom(seed) {
 function checkFlashEvent() {
   const now = new Date();
   
-  // Janelas expandidas de 4 horas para garantir tolerância de rede e fuso horário
   const windows = [
-    { startHour: 0, endHour: 4 },   // Das 00:00 às 04:00
-    { startHour: 8, endHour: 12 },  // Das 08:00 às 12:00
-    { startHour: 16, endHour: 20 }  // Das 16:00 às 20:00 (Fica ativo durante toda a tarde/noite)
+    { startHour: 0, endHour: 4 },   
+    { startHour: 8, endHour: 12 },  
+    { startHour: 16, endHour: 20 }  
   ];
 
   let currentActiveEventEnd = null;
 
   windows.forEach(w => {
-    // Força a criação das datas baseadas rigorosamente no ano, mês e dia locais atuais
     const eventStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), w.startHour, 0, 0);
     const eventEndDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), w.endHour, 0, 0);
 
-    // Validação de segurança para conferir se a hora atual cai no range
     if (now.getTime() >= eventStartDate.getTime() && now.getTime() < eventEndDate.getTime()) {
       currentActiveEventEnd = eventEndDate;
     }
@@ -461,16 +458,13 @@ function checkFlashEvent() {
   }
 
   if (currentActiveEventEnd) {
-    // Força o painel a aparecer usando a propriedade correta de bloco
     panel.style.setProperty("display", "block", "important");
-    
     if (!eventActive) {
       eventActive = true;
       resetRouletteUI();
     }
     updateEventCountdown(currentActiveEventEnd);
   } else {
-    // Desativa se estiver fora do horário regulamentar das janelas
     eventActive = false;
     eventMultiplier = 1;
     panel.style.display = "none";
@@ -484,8 +478,6 @@ function checkFlashEvent() {
 function updateEventCountdown(endTime) {
   const timerEl = document.getElementById("event-timer");
   if (!timerEl) return;
-
-  // Evita duplicação de loops que travam ou congelam a contagem visual
   if (timerInterval) return;
 
   timerInterval = setInterval(() => {
@@ -555,7 +547,6 @@ function spinRoulette() {
   }, 100);
 }
 
-// Executa a checagem em background a cada 5 segundos de forma leve
 setInterval(checkFlashEvent, 5000);
 
 // ==========================================================================
@@ -598,7 +589,7 @@ function updateKeyboardColors(letter, status) {
 
 
 // ==========================================================================
-// BLOCO: ENTRADA DE DADOS E EVENTOS DE DIGITAÇÃO (MOUSEDOWN / KEYDOWN)
+// BLOCO: ENTRADA DE DADOS E EVENTOS DE DIGITAÇÃO
 // ==========================================================================
 function selectTile(colIndex) {
   if (currentRow >= getMaxRowsForCurrentLevel()) return;
@@ -707,7 +698,7 @@ async function startNewGame() {
 
   updatePointsDisplay();
   await loadRanking();
-  checkFlashEvent(); // Sincroniza o estado do evento ao iniciar nova partida
+  checkFlashEvent(); 
 
   for (let b = 0; b < currentMode; b++) {
     try {
@@ -818,7 +809,6 @@ function checkWord() {
   currentCol = 0;
 
   if (boardsData.every(b => b.solved)) {
-    // CORRIGIDO: Mostra os pontos finais multiplicados na string de vitória se houver evento ativo
     let scoreCalculado = totalRoundScore;
     if (currentLevel === 2) scoreCalculado = Math.floor(scoreCalculado * 2); 
     if (currentLevel === 3) scoreCalculado = Math.floor(scoreCalculado * 5); 
@@ -858,27 +848,23 @@ function checkWord() {
 async function saveScore(scorePoints, e_Vitoria) {
   if (!currentUser) return;
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
-  let finalCalculatedScore = scorePoints;
+  let finalCalculatedScore = 0;
 
-  if (wordsSolvedCount === 0) {
-    finalCalculatedScore = -15000;
-  } else {
+  // Modificado: Se não resolveu nada ou perdeu, ganha 0 pontos (sem perdas negativas)
+  if (wordsSolvedCount > 0 && e_Vitoria) {
+    finalCalculatedScore = scorePoints;
     if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 2); 
     if (currentLevel === 3) finalCalculatedScore = Math.floor(scorePoints * 5); 
     
-    // CORRIGIDO: Se o evento estiver ativo e a roleta rodada, multiplica os pontos finais obtidos antes de enviar ao banco!
     if (eventActive && eventMultiplier > 1) {
       finalCalculatedScore = Math.floor(finalCalculatedScore * eventMultiplier);
-      console.log(`Pontuação multiplicada por ${eventMultiplier}x devido ao Evento Relâmpago!`);
     }
   }
 
+  // Avanço ou reset do nível de jogo baseado em vitórias normais
   if (e_Vitoria) {
-    if (currentLevel < 3) {
-      currentLevel++;
-    } else {
-      currentLevel = 1; 
-    }
+    if (currentLevel < 3) currentLevel++;
+    else currentLevel = 1; 
   } else {
     currentLevel = 1;
   }
@@ -925,22 +911,13 @@ function showEndGameModal(isVictory) {
 
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
   
-  // Define os Multiplicadores de Vitória e as Punições de Derrota por Nível
   let multiplierVal = 1;
-  let pontosPerdidos = -15000; // Padrão Level 1
-
-  if (currentLevel === 2) {
-    multiplierVal = 2;
-    pontosPerdidos = -30000; // Level 2
-  } else if (currentLevel === 3) {
-    multiplierVal = 5;
-    pontosPerdidos = -50000; // Level 3
-  }
+  if (currentLevel === 2) multiplierVal = 2;
+  else if (currentLevel === 3) multiplierVal = 5;
 
   const baseScore = wordsSolvedCount > 0 ? totalRoundScore : 0;
-  let finalScoreToShow = wordsSolvedCount === 0 ? pontosPerdidos : Math.floor(baseScore * multiplierVal);
+  let finalScoreToShow = isVictory ? Math.floor(baseScore * multiplierVal) : 0;
 
-  // Aplica o multiplicador da roleta na tela de fim de jogo se for vitória
   if (isVictory && eventActive && eventMultiplier > 1) {
     finalScoreToShow = Math.floor(finalScoreToShow * eventMultiplier);
   }
@@ -948,12 +925,9 @@ function showEndGameModal(isVictory) {
   const text = document.createElement("p");
   
   if (isVictory) {
-    // Se venceu, limpa o estado de jogo ativo (não será punido por F5)
-    localStorage.removeItem("gameInProgress");
     const msgBonus = (eventActive && eventMultiplier > 1) ? `<br><span style="color:#ff4655; font-weight:bold;">(Bônus de ${eventMultiplier}x da Roleta Aplicado!)</span>` : '';
     text.innerHTML = `Você venceu o desafio garantindo <strong>+${finalScoreToShow.toLocaleString()}</strong> pontos!${msgBonus}<br><br>Aguarde o carregamento do próximo nível.`;
   } else {
-    // Filtra quais palavras o usuário NÃO conseguiu adivinhar
     const palavrasNaoResolvidas = [];
     for (let b = 0; b < currentMode; b++) {
       if (!boardsData[b].solved) {
@@ -962,11 +936,9 @@ function showEndGameModal(isVictory) {
     }
     const respostaFinal = palavrasNaoResolvidas.join(" | ");
 
-    if (wordsSolvedCount === 0) {
-      text.innerHTML = `Você gastou todos os seus palpites. Erro Grave! <br><span style="color:#ff4655; font-weight:bold;">Perdeu ${finalScoreToShow.toLocaleString()} PDL</span>.<br><br>As respostas eram:<br><strong>${respostaFinal}</strong>`;
-    } else {
-      text.innerHTML = `Não foi dessa vez! Você acertou ${wordsSolvedCount} tabuleiro(s), mas esgotou suas tentativas.<br><span style="color:#ff4655; font-weight:bold;">Perdeu ${pontosPerdidos.toLocaleString()} PDL</span>.<br><br>As palavras que faltaram eram:<br><strong style="color:#ff4655; font-size: 16px;">${respostaFinal}</strong>`;
-    }
+    text.innerHTML = `Não foi dessa vez! Você acertou ${wordsSolvedCount} tabuleiro(s), mas esgotou suas tentativas.<br>
+    <span style="color:#ff4655; font-weight:bold;">Pontos obtidos: +0 PDL</span>.<br><br>
+    As palavras que faltaram eram:<br><strong style="color:#ff4655; font-size: 16px;">${respostaFinal}</strong>`;
   }
 
   const btnContainer = document.createElement("div");
@@ -1034,76 +1006,12 @@ function closeAchievementsModal() {
   if (modal) modal.style.display = "none";
 }
 
-// ==========================================================================
-// BLOCO: SISTEMA ANTI-DESISTÊNCIA (CONTROLE DE REINÍCIO/F5)
-// ==========================================================================
-
-// Chama isso sempre que iniciar uma nova partida para marcar que o jogo começou
-function registrarInicioDePartida() {
-  const statusJogo = {
-    inProgress: true,
-    level: currentLevel || 1
-  };
-  localStorage.setItem("gameInProgress", JSON.stringify(statusJogo));
-}
-
-// Verifica se o jogador abandonou a partida anterior ao carregar a página
-async function verificarPenalidadeAbandono() {
-  const jogoPendente = localStorage.getItem("gameInProgress");
-  if (!jogoPendente || !currentUser) return;
-
-  const dadosJogo = JSON.parse(jogoPendente);
-  
-  if (dadosJogo.inProgress) {
-    let punicaoAbandono = -5000; // Padrão Nível 1
-    
-    if (dadosJogo.level === 2) {
-      punicaoAbandono = -40000; // Nível 2
-    } else if (dadosJogo.level === 3) {
-      punicaoAbandono = -100000; // Nível 3
-    }
-
-    // Aplica a perda de pontos no objeto local
-    currentUser.points = (Number(currentUser.points) || 0) + punicaoAbandono;
-    localStorage.setItem("user", JSON.stringify(currentUser));
-    
-    // Alerta o jogador sobre a punição por abuso de F5
-    alert(`🚨 PENALIDADE DE ABANDONO! Você recarregou ou saiu da página durante uma partida ativa do Nível ${dadosJogo.level}.\nPontos perdidos: ${punicaoAbandono.toLocaleString()} PDL.`);
-    
-    // Envia a nova pontuação atualizada para salvar no banco de dados do seu backend
-    try {
-      await fetch("/score", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          username: currentUser.username, 
-          score: punicaoAbandono, // Envia o valor negativo para somar decrementando no banco
-          wordsSolved: 0 
-        })
-      });
-    } catch (e) {
-      console.error("Erro ao sincronizar punição com o servidor:", e);
-    }
-
-    // Limpa a flag para não punir duas vezes seguidas
-    localStorage.removeItem("gameInProgress");
-    updatePointsDisplay();
-  }
-}
-
-// Monitora se o usuário está fechando ou atualizando a aba
-window.addEventListener("beforeunload", () => {
-  // Se o jogo está rolando e ele não ganhou/perdeu ainda, a flag 'gameInProgress' continua como true
-  // O navegador salva e aplica a punição no próximo loading.
-});
-
 
 // ==========================================================================
 // BLOCO: INICIALIZAÇÃO DO JOGO (DOM CONTENT LOADED)
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", async () => {
   checkUserSession();
-  await verificarPenalidadeAbandono(); // Verifica se houve F5 abusivo
-  checkFlashEvent();                   // Ativa o evento relâmpago
-  startNewGame();                     // Inicia a criação das telas
+  checkFlashEvent();                   
+  startNewGame();                     
 });

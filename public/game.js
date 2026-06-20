@@ -423,7 +423,7 @@ async function loadRanking() {
 
 
 // ==========================================================================
-// BLOCO: SISTEMA DE EVENTO RELÂMPAGO E ROLETA (BLINDADO CONTRA ERROS DE HORA)
+// BLOCO: SISTEMA DE EVENTO RELÂMPAGO E ROLETA
 // ==========================================================================
 function pseudoRandom(seed) {
   let x = Math.sin(seed) * 10000;
@@ -453,7 +453,7 @@ function checkFlashEvent() {
   const panel = document.getElementById("event-panel");
   
   if (!panel) {
-    console.error("Erro Crítico: O id='event-panel' não existe no seu arquivo index.html");
+    console.error("Erro: O id='event-panel' não existe no seu arquivo index.html");
     return;
   }
 
@@ -673,7 +673,7 @@ function updateTile(boardIndex, row, col, letter) {
 
 
 // ==========================================================================
-// BLOCO: GERENCIAMENTO DE NÍVEIS (1 QUADRO, 2 QUADROS OU 4 QUADROS)
+// BLOCO: GERENCIAMENTO DE NÍVEIS
 // ==========================================================================
 async function startNewGame() {
   currentRow = 0;
@@ -744,7 +744,7 @@ async function startNewGame() {
 
 
 // ==========================================================================
-// BLOCO: VERIFICAÇÃO E VALIDAÇÃO DAS LETRAS (CORRETO, QUASE, INCORRETO)
+// BLOCO: VERIFICAÇÃO E VALIDAÇÃO DAS LETRAS
 // ==========================================================================
 function checkWord() {
   document.querySelectorAll(".tile").forEach(t => t.classList.remove("active-tile"));
@@ -843,14 +843,13 @@ function checkWord() {
 
 
 // ==========================================================================
-// BLOCO: SALVAR PONTUAÇÃO (BANCO DE DADOS / LOCALSTORAGE)
+// BLOCO: SALVAR PONTUAÇÃO (SINCRONIZADO COM POSTGRES NO NEON)
 // ==========================================================================
 async function saveScore(scorePoints, e_Vitoria) {
   if (!currentUser) return;
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
   let finalCalculatedScore = 0;
 
-  // Modificado: Se não resolveu nada ou perdeu, ganha 0 pontos (sem perdas negativas)
   if (wordsSolvedCount > 0 && e_Vitoria) {
     finalCalculatedScore = scorePoints;
     if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 2); 
@@ -861,7 +860,6 @@ async function saveScore(scorePoints, e_Vitoria) {
     }
   }
 
-  // Avanço ou reset do nível de jogo baseado em vitórias normais
   if (e_Vitoria) {
     if (currentLevel < 3) currentLevel++;
     else currentLevel = 1; 
@@ -875,8 +873,8 @@ async function saveScore(scorePoints, e_Vitoria) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         username: currentUser.username, 
-        score: finalCalculatedScore, 
-        wordsSolved: wordsSolvedCount 
+        score: Number(finalCalculatedScore), 
+        wordsSolved: Number(wordsSolvedCount)
       })
     });
     const data = await response.json();
@@ -887,7 +885,7 @@ async function saveScore(scorePoints, e_Vitoria) {
       await loadRanking();
     }
   } catch(e) {
-    console.error("Erro crítico ao salvar pontuação:", e);
+    console.error("Erro crítico ao salvar pontuação no Neon:", e);
   }
 }
 
@@ -999,6 +997,12 @@ function openAchievementsModal() {
       }
     }
   });
+}
+
+// Função global para desconectar o jogador do sistema de forma segura
+function logout() {
+  localStorage.removeItem("user");
+  window.location.href = "/login";
 }
 
 function closeAchievementsModal() {

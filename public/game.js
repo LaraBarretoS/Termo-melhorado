@@ -18,7 +18,12 @@ let totalRoundScore = 0;
 let guesses = [];
 let boardsData = []; 
 
-let currentUser = JSON.parse(localStorage.getItem("user"));
+let currentUser = null;
+try {
+  currentUser = JSON.parse(localStorage.getItem("user"));
+} catch (e) {
+  console.error("Erro ao ler dados do usuário do localStorage:", e);
+}
 
 // Variáveis do Novo Sistema de Evento
 let eventMultiplier = 1; // 1x por padrão (sem evento)

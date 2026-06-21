@@ -21,10 +21,14 @@ function page(file) {
   };
 }
 
-app.get(\"/\", page(\"login.html\"));
-app.get(\"/login\", page(\"login.html\"));
-app.get(\"/cadastro\", page(\"cadastro.html\"));
-app.get(\"/game\", page(\"index.html\"));
+app.get("/", page("login.html"));
+app.get("/login", page("login.html"));
+app.get("/cadastro", page("cadastro.html"));
+app.get("/game", page("index.html"));
+
+app.get("/index.html", (req, res) => {
+  res.redirect("/");
+});
 
 const wordsPath = path.join(__dirname, \"words.json\");
 const words = JSON.parse(fs.readFileSync(wordsPath, \"utf8\"));

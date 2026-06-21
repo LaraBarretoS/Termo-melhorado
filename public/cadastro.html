@@ -3,27 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastrar - Termo Profissional</title>
-  <style>
-    body { background-color: #121213; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .container { background-color: #1a1a1c; border: 1px solid #3f3f46; padding: 30px; border-radius: 8px; width: 100%; max-width: 350px; text-align: center; }
-    h1 { letter-spacing: 2px; margin-bottom: 25px; font-size: 24px; }
-    input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #3f3f46; background: #27272a; color: white; box-sizing: border-box; }
-    button { width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; background: #ff4655; color: white; }
-    .sec-btn { background: #27272a; color: white; margin-top: 10px; }
-  </style>
+  <title>Cadastrar</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
   <div class="container">
     <h1>CRIAR CONTA</h1>
-    <form onsubmit="event.preventDefault(); register();">
-      <input type="text" id="username" placeholder="Defina seu Usuário" required>
-      <input type="password" id="password" placeholder="Defina sua Senha" required>
-      <button type="submit">Cadastrar Conta</button>
-      <button type="button" class="sec-btn" onclick="window.location.href='/login'">Voltar ao Login</button>
+
+    <form onsubmit="event.preventDefault(); register();" style="display: flex; flex-direction: column; gap: 15px;">
+      <input type="text" id="username" placeholder="Usuário" required>
+      <input type="password" id="password" placeholder="Senha" required>
+
+      <div class="buttons">
+        <button type="submit">Cadastrar</button>
+        <button type="button" onclick="window.location.href='/login'">Voltar</button>
+      </div>
     </form>
-    <p id="message" style="color: #ff4655; margin-top: 10px;"></p>
+
+    <p id="message"></p>
   </div>
+
   <script src="login.js"></script>
 </body>
 </html>

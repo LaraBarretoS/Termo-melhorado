@@ -18,27 +18,16 @@ let totalRoundScore = 0;
 let guesses = [];
 let boardsData = []; 
 
-// Captura o usuário de forma segura contra erros de JSON
-let currentUser = null;
-try {
-  currentUser = JSON.parse(localStorage.getItem("user"));
-} catch (e) {
-  console.error("Erro ao ler dados do usuário do localStorage:", e);
-}
+let currentUser = JSON.parse(localStorage.getItem("user"));
 
-// PROTEÇÃO CONTRA LOOPS: Se não houver uma conta válida salva, desloga e manda pro login
-if (!currentUser || !currentUser.username) {
-  localStorage.removeItem("user");
-  window.location.href = "/login";
-}
-
-// Variáveis do Novo Sistema de Evento (MANTIDAS COM SUCESSO)
+// Variáveis do Novo Sistema de Evento
 let eventMultiplier = 1; // 1x por padrão (sem evento)
 let eventActive = false;
 let timerInterval = null;
 
+
 // ==========================================================================
-// BLOCO ATUALIZADO: MAPEAMENTO DE ARQUIVOS FÍSICOS (AVATARES E BORDAS)
+// BLOCO: MAPEAMENTO DE ARQUIVOS FÍSICOS (AVATARES E BORDAS)
 // ==========================================================================
 const listaAvataresReais = ["Dino", "Dog", "Freddy", "Gator", "Gengar", "Giraffe", "Monkey", "Shrimp", "Bunny"];
 
@@ -50,12 +39,13 @@ const listaBordasReais = [
   { id: "gold-border", nome: "Borda Ouro" },
   { id: "platinum-border", nome: "Borda Platina" },
   { id: "diamond-border", nome: "Borda Diamante" },
-  { id: "ascendant-border", nome: "Borda Ascendente" },
+  { id: "ascendant-border", nome: "Borda Ascendente" }, 
   { id: "imortal-1-border", nome: "Borda Imortal I" },
   { id: "imortal-2-border", nome: "Borda Imortal II" },
   { id: "imortal-3-border", nome: "Borda Imortal III" },
-  { id: "radiant-border", nome: "Borda Radiante" }
+  { id: "Radiant-border", nome: "Borda Radiante" } 
 ];
+
 
 // ==========================================================================
 // BLOCO: REGRAS DE ELO E PADRONIZAÇÃO DE IMAGENS (SISTEMA RANKED)
@@ -93,7 +83,7 @@ function formatarNomeImg(nomeElo) {
 
 
 // ==========================================================================
-// BLOCO ATUALIZADO: POP-UP INTERATIVO DE COSMÉTICOS (LOJA / MODAL)
+// BLOCO: POP-UP INTERATIVO DE COSMÉTICOS (LOJA / MODAL)
 // ==========================================================================
 function openCosmeticsModal() {
   const modal = document.getElementById("cosmetics-modal");
@@ -150,7 +140,7 @@ function renderCosmeticsGrid() {
     "imortal-1-border": 5000000,
     "imortal-2-border": 7000000,
     "imortal-3-border": 9000000,
-    "radiant-border": 12000000 // Corrigido para minúsculo para casar com o banco e CSS
+    "Radiant-border": 12000000
   };
 
   gridBorders.innerHTML = "";
@@ -206,52 +196,23 @@ function selecionarAvatar(nomeAvatar) {
   if (!currentUser) return;
   currentUser.avatar = nomeAvatar;
   localStorage.setItem("user", JSON.stringify(currentUser));
-  
-  // Atualiza a vitrine de seleção
   renderCosmeticsGrid(); 
-  
-  // ATUALIZAÇÃO VISUAL EM TEMPO REAL (Muda no cabeçalho instantaneamente)
-  const imgAvatarTopo = document.getElementById("profile-avatar-img");
-  if (imgAvatarTopo) {
-    const extensao = nomeAvatar === "Bunny" ? "png" : "jpg";
-    imgAvatarTopo.src = `assets/avatars/${nomeAvatar}.${extensao}`;
-  }
-  
-  // Sincroniza em background sem dar reload na página
-  salvarCosmeticosNoBanco(); 
+  salvarEAtualizarPagina(); 
+}
+
+function getMaxRowsForCurrentLevel() {
+  return currentLevel === 3 ? 8 : MAX_ROWS;
 }
 
 function selecionarBorda(idBorda) {
   if (!currentUser) return;
   currentUser.border = idBorda;
   localStorage.setItem("user", JSON.stringify(currentUser));
-  
-  // Atualiza a vitrine de seleção
   renderCosmeticsGrid(); 
-  
-  // ATUALIZAÇÃO VISUAL EM TEMPO REAL (Muda no cabeçalho instantaneamente)
-  const imgBordaTopo = document.getElementById("profile-border-img");
-  if (imgBordaTopo) {
-    if (idBorda === "default" || !idBorda) {
-      imgBordaTopo.style.display = "none";
-      imgBordaTopo.src = "";
-    } else {
-      imgBordaTopo.style.display = "block";
-      imgBordaTopo.src = `assets/borders/${idBorda}.png`;
-    }
-  }
-  
-  // Sincroniza em background sem dar reload na página
-  salvarCosmeticosNoBanco(); 
+  salvarEAtualizarPagina(); 
 }
 
-// MANTÉM TODA A REGRA DE NEGÓCIO ORIGINAL E ESSENCIAL DO SEU NÍVEL 3 (NÃO REMOVER)
-function getMaxRowsForCurrentLevel() {
-  return currentLevel === 3 ? 8 : MAX_ROWS;
-}
-
-// NOVO MÉTODO DE SALVAMENTO FLUIDO (Substituiu o antigo salvarEAtualizarPagina)
-async function salvarCosmeticosNoBanco() {
+async function salvarEAtualizarPagina() {
   if (!currentUser) return;
   try {
     await fetch("/update-cosmetics", {
@@ -263,11 +224,13 @@ async function salvarCosmeticosNoBanco() {
         border: currentUser.border || "default"
       })
     });
-    // O reload foi removido daqui para garantir a fluidez do jogo!
+    window.location.reload();
   } catch (err) {
-    console.error("Erro silencioso ao sincronizar cosméticos com o banco:", err);
+    console.error("Erro ao sincronizar cosméticos com o banco:", err);
+    window.location.reload();
   }
 }
+
 
 // ==========================================================================
 // BLOCO: VERIFICAÇÃO DE PERFIL E SINCRONIZAÇÃO DE USUÁRIO
@@ -460,7 +423,7 @@ async function loadRanking() {
 
 
 // ==========================================================================
-// BLOCO: SISTEMA DE EVENTO RELÂMPAGO E ROLETA
+// BLOCO: SISTEMA DE EVENTO RELÂMPAGO E ROLETA (BLINDADO CONTRA ERROS DE HORA)
 // ==========================================================================
 function pseudoRandom(seed) {
   let x = Math.sin(seed) * 10000;
@@ -490,7 +453,7 @@ function checkFlashEvent() {
   const panel = document.getElementById("event-panel");
   
   if (!panel) {
-    console.error("Erro: O id='event-panel' não existe no seu arquivo index.html");
+    console.error("Erro Crítico: O id='event-panel' não existe no seu arquivo index.html");
     return;
   }
 
@@ -710,7 +673,7 @@ function updateTile(boardIndex, row, col, letter) {
 
 
 // ==========================================================================
-// BLOCO: GERENCIAMENTO DE NÍVEIS
+// BLOCO: GERENCIAMENTO DE NÍVEIS (1 QUADRO, 2 QUADROS OU 4 QUADROS)
 // ==========================================================================
 async function startNewGame() {
   currentRow = 0;
@@ -781,7 +744,7 @@ async function startNewGame() {
 
 
 // ==========================================================================
-// BLOCO: VERIFICAÇÃO E VALIDAÇÃO DAS LETRAS
+// BLOCO: VERIFICAÇÃO E VALIDAÇÃO DAS LETRAS (CORRETO, QUASE, INCORRETO)
 // ==========================================================================
 function checkWord() {
   document.querySelectorAll(".tile").forEach(t => t.classList.remove("active-tile"));
@@ -880,13 +843,14 @@ function checkWord() {
 
 
 // ==========================================================================
-// BLOCO: SALVAR PONTUAÇÃO (SINCRONIZADO COM POSTGRES NO NEON)
+// BLOCO: SALVAR PONTUAÇÃO (BANCO DE DADOS / LOCALSTORAGE)
 // ==========================================================================
 async function saveScore(scorePoints, e_Vitoria) {
   if (!currentUser) return;
   const wordsSolvedCount = boardsData.filter(b => b.solved).length;
   let finalCalculatedScore = 0;
 
+  // Modificado: Se não resolveu nada ou perdeu, ganha 0 pontos (sem perdas negativas)
   if (wordsSolvedCount > 0 && e_Vitoria) {
     finalCalculatedScore = scorePoints;
     if (currentLevel === 2) finalCalculatedScore = Math.floor(scorePoints * 2); 
@@ -897,6 +861,7 @@ async function saveScore(scorePoints, e_Vitoria) {
     }
   }
 
+  // Avanço ou reset do nível de jogo baseado em vitórias normais
   if (e_Vitoria) {
     if (currentLevel < 3) currentLevel++;
     else currentLevel = 1; 
@@ -910,8 +875,8 @@ async function saveScore(scorePoints, e_Vitoria) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         username: currentUser.username, 
-        score: Number(finalCalculatedScore), 
-        wordsSolved: Number(wordsSolvedCount)
+        score: finalCalculatedScore, 
+        wordsSolved: wordsSolvedCount 
       })
     });
     const data = await response.json();
@@ -922,7 +887,7 @@ async function saveScore(scorePoints, e_Vitoria) {
       await loadRanking();
     }
   } catch(e) {
-    console.error("Erro crítico ao salvar pontuação no Neon:", e);
+    console.error("Erro crítico ao salvar pontuação:", e);
   }
 }
 
@@ -1034,12 +999,6 @@ function openAchievementsModal() {
       }
     }
   });
-}
-
-// Função global para desconectar o jogador do sistema de forma segura
-function logout() {
-  localStorage.removeItem("user");
-  window.location.href = "/login";
 }
 
 function closeAchievementsModal() {

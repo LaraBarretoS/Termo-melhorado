@@ -12,31 +12,33 @@ const PORT = process.env.PORT || 5500;
 app.use(cors());
 app.use(express.json()); 
 
-const publicPath = path.join(__dirname, "../public");
+// CAMINHO RESOLVIDO: Garante estabilidade na localização de scripts estáticos no Render
+const publicPath = path.resolve(__dirname, "../public");
 app.use(express.static(publicPath));
 
-// Rotas de entrega de Páginas com caminhos absolutos para evitar loops no Render
+// Rotas de entrega de Páginas usando caminhos absolutos validados
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/login.html"));
+  res.sendFile(path.join(publicPath, "login.html"));
 });
 
 app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/login.html"));
+  res.sendFile(path.join(publicPath, "login.html"));
 });
 
 app.get("/cadastro", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/cadastro.html"));
+  res.sendFile(path.join(publicPath, "cadastro.html"));
 });
 
 app.get("/game", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/index.html"));
+  res.sendFile(path.join(publicPath, "index.html"));
 });
 
 app.get("/index.html", (req, res) => {
   res.redirect("/");
 });
 
-const wordsPath = path.join(__dirname, "words.json");
+// Resgate do arquivo JSON de palavras corrigido
+const wordsPath = path.resolve(__dirname, "words.json");
 const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 
 // ==========================================================================
@@ -52,7 +54,7 @@ if (isPostgres) {
   });
   console.log("Conectado ao PostgreSQL do Neon");
 } else {
-  const dbPath = path.join(__dirname, "database.db");
+  const dbPath = path.resolve(__dirname, "database.db");
   db = new sqlite3.Database(dbPath, (err) => {
     if (err) console.error("Erro SQLite:", err.message);
     else console.log("Conectado ao SQLite Local (database.db)");
@@ -105,7 +107,7 @@ app.post("/login", async (req, res) => {
     const match = await bcrypt.compare(password, userRow.password);
     if (!match) return res.status(400).json({ error: "Senha incorreta" });
     
-    // Tratamento robusto mapeando chaves estritamente minúsculas vindas do Neon
+    // Mapeamento das chaves minúsculas vindas do Neon
     res.json({
       username: userRow.username,
       points: parseInt(userRow.points) || 0,

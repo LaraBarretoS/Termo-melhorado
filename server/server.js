@@ -30,8 +30,8 @@ app.get("/index.html", (req, res) => {
   res.redirect("/");
 });
 
-const wordsPath = path.join(__dirname, \"words.json\");
-const words = JSON.parse(fs.readFileSync(wordsPath, \"utf8\"));
+const wordsPath = path.join(__dirname, "words.json");
+const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 
 // ==========================================================================
 // BANCO DE DADOS (Postgres ou SQLite Local)
@@ -44,12 +44,12 @@ if (isPostgres) {
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
   });
-  console.log(\"Conectado ao PostgreSQL do Render\");
+  console.log("Conectado ao PostgreSQL do Render");
 } else {
-  const dbPath = path.join(__dirname, \"database.db\");
+  const dbPath = path.join(__dirname, "database.db");
   db = new sqlite3.Database(dbPath, (err) => {
-    if (err) console.error(\"Erro SQLite:\", err.message);
-    else console.log(\"Conectado ao SQLite Local (database.db)\");
+    if (err) console.error("Erro SQLite:", err.message);
+    else console.log("Conectado ao SQLite Local (database.db)");
   });
 }
 
@@ -98,32 +98,32 @@ if (isPostgres) {
 // ROTAS DA API
 // ==========================================================================
 
-app.post(\"/register\", async (req, res) => {
+app.post("/register", async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: \"Preencha tudo\" });
+  if (!username || !password) return res.status(400).json({ error: "Preencha tudo" });
   try {
     const hash = await bcrypt.hash(password, 10);
     const query = `INSERT INTO users (username, password, points, coins) VALUES (?, ?, 0, 100)`;
     const pgQuery = `INSERT INTO users (username, password, points, coins) VALUES ($1, $2, 0, 100)`;
     
     ejecutarQuery(isPostgres ? pgQuery : query, [username, hash], (err) => {
-      if (err) return res.status(400).json({ error: \"Usuário já existe\" });
+      if (err) return res.status(400).json({ error: "Usuário já existe" });
       res.json({ success: true });
     });
   } catch (e) {
-    res.status(500).json({ error: \"Erro no servidor\" });
+    res.status(500).json({ error: "Erro no servidor" });
   }
 });
 
-app.post(\"/login\", async (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   const query = `SELECT * FROM users WHERE username = ?`;
   const pgQuery = `SELECT * FROM users WHERE username = $1`;
 
   ejecutarQuery(isPostgres ? pgQuery : query, [username], async (err, result) => {
-    if (err || !result.row) return res.status(400).json({ error: \"Usuário não encontrado\" });
+    if (err || !result.row) return res.status(400).json({ error: "Usuário não encontrado" });
     const match = await bcrypt.compare(password, result.row.password);
-    if (!match) return res.status(400).json({ error: \"Senha incorreta\" });
+    if (!match) return res.status(400).json({ error: "Senha incorreta" });
     
     res.json({
       username: result.row.username,
@@ -135,19 +135,19 @@ app.post(\"/login\", async (req, res) => {
   });
 });
 
-app.get(\"/words\", (req, res) => {
+app.get("/words", (req, res) => {
   res.json(words);
 });
 
-app.get(\"/ranking\", (req, res) => {
+app.get("/ranking", (req, res) => {
   const q = `SELECT username, points, avatar, border FROM users ORDER BY points DESC LIMIT 50`;
   ejecutarQuery(q, [], (err, result) => {
-    if (err) return res.status(500).json({ error: \"Erro ao carregar ranking\" });
+    if (err) return res.status(500).json({ error: "Erro ao carregar ranking" });
     res.json(result.rows || []);
   });
 });
 
-app.post(\"/score\", (req, res) => {
+app.post("/score", (req, res) => {
   const { username, score, coinsEarned } = req.body;
   const pts = parseInt(score) || 0;
   const cns = parseInt(coinsEarned) || 0;
@@ -156,24 +156,25 @@ app.post(\"/score\", (req, res) => {
   const pgQ = `UPDATE users SET points = points + $1, coins = coins + $2 WHERE username = $3`;
 
   ejecutarQuery(isPostgres ? pgQ : q, [pts, cns, username], (err) => {
-    if (err) return res.status(500).json({ error: \"Erro ao salvar dados\" });
+    if (err) return res.status(500).json({ error: "Erro ao salvar dados" });
     
     const findQ = `SELECT points, coins FROM users WHERE username = ?`;
     const findPgQ = `SELECT points, coins FROM users WHERE username = $1`;
     ejecutarQuery(isPostgres ? findPgQ : findQ, [username], (err2, result) => {
-      if (err2 || !result.row) return res.status(500).json({ error: \"Erro ao resgatar dados\" });
+      if (err2 || !result.row) return res.status(500).json({ error: "Erro ao resgatar dados" });
       res.json({ success: true, newPoints: result.row.points, newCoins: result.row.coins });
     });
   });
 });
 
-app.post(\"/save-cosmetics\", (req, res) => {
+// Ajustado para bater com o endpoint do frontend ("/update-cosmetics")
+app.post("/update-cosmetics", (req, res) => {
   const { username, avatar, border } = req.body;
   const q = `UPDATE users SET avatar = ?, border = ? WHERE username = ?`;
   const pgQ = `UPDATE users SET avatar = $1, border = $2 WHERE username = $3`;
 
   ejecutarQuery(isPostgres ? pgQ : q, [avatar, border, username], (err) => {
-    if (err) return res.status(500).json({ error: \"Erro ao salvar cosméticos\" });
+    if (err) return res.status(500).json({ error: "Erro ao salvar cosméticos" });
     res.json({ success: true });
   });
 });

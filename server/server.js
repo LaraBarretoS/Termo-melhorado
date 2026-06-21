@@ -1,181 +1,176 @@
-const express = require("express");
-const sqlite3 = require("sqlite3").verbose();
-const { Pool } = require("pg"); 
-const bcrypt = require("bcrypt");
-const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const { Pool } = require('pg');
+require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5500;
 
+// Configurações de Middleware
 app.use(cors());
-app.use(express.json()); 
+app.use(express.json());
 
-// ==========================================================================
-// TRATAMENTO DINÂMICO DE CAMINHOS (Mata o erro do Unexpected Token '<')
-// ==========================================================================
-let publicPath = path.resolve(__dirname, "../public");
-
-// Se o Render estiver executando a partir da raiz, ajusta o caminho automaticamente
-if (!fs.existsSync(path.join(publicPath, "login.html"))) {
-  publicPath = path.resolve(process.cwd(), "public");
-}
-if (!fs.existsSync(path.join(publicPath, "login.html"))) {
-  publicPath = path.resolve(__dirname, "public");
-}
-
-console.log("Pasta pública localizada com sucesso em:", publicPath);
-app.use(express.static(publicPath));
-
-// Rotas de entrega de Páginas usando caminhos absolutos validados dinamicamente
-app.get("/", (req, res) => {
-  res.sendFile(path.join(publicPath, "login.html"));
-});
-
-app.get("/login", (req, res) => {
-  res.sendFile(path.join(publicPath, "login.html"));
-});
-
-app.get("/cadastro", (req, res) => {
-  res.sendFile(path.join(publicPath, "cadastro.html"));
-});
-
-app.get("/game", (req, res) => {
-  res.sendFile(path.join(publicPath, "index.html"));
-});
-
-app.get("/index.html", (req, res) => {
-  res.redirect("/");
-});
-
-// Resgate do arquivo JSON de palavras corrigido
-let wordsPath = path.resolve(__dirname, "words.json");
-if (!fs.existsSync(wordsPath)) {
-  wordsPath = path.resolve(process.cwd(), "server/words.json");
-}
-const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
-
-// ==========================================================================
-// BANCO DE DADOS (Postgres Neon ou SQLite Local)
-// ==========================================================================
-let db;
-const isPostgres = !!process.env.DATABASE_URL;
-
-if (isPostgres) {
-  db = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  });
-  console.log("Conectado ao PostgreSQL do Neon");
-} else {
-  let dbPath = path.resolve(__dirname, "database.db");
-  if (!fs.existsSync(dbPath)) {
-    dbPath = path.resolve(process.cwd(), "server/database.db");
+// ==========================================
+// Conexão com o Banco de Dados (Neon/PostgreSQL)
+// ==========================================
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Obrigatório para conexões seguras com o Neon
   }
-  db = new sqlite3.Database(dbPath, (err) => {
-    if (err) console.error("Erro SQLite:", err.message);
-    else console.log("Conectado ao SQLite Local (database.db)");
-  });
-}
+});
 
-function ejecutarQuery(query, params, callback) {
-  if (isPostgres) {
-    db.query(query, params)
-      .then(res => callback(null, { rows: res.rows, row: res.rows[0] }))
-      .catch(err => callback(err, null));
-  } else {
-    db.all(query, params, function(err, rows) {
-      if (err) return callback(err, null);
-      callback(null, { rows: rows, row: rows[0] });
-    });
+// Testar a conexão com o banco de dados assim que o servidor inicia
+pool.connect((err, client, release) => {
+  if (err) {
+    return console.error('Erro ao conectar ao PostgreSQL do Neon:', err.stack);
   }
-}
+  console.log('Conectado com sucesso ao PostgreSQL do Neon!');
+  release();
+});
 
-// ==========================================================================
-// ROTAS DA API (Compatibilidade Total Neon)
-// ==========================================================================
+// ==========================================
+// 1. Servir Arquivos Estáticos (Pasta Public)
+// ==========================================
+// Esta linha deve vir ANTES das rotas de página para que o Express 
+// consiga entregar arquivos como login.js e style.css diretamente.
+app.use(express.static(path.join(__dirname, '../public')));
 
-app.post("/register", async (req, res) => {
+// ==========================================
+// 2. Rotas de Páginas (GET)
+// ==========================================
+
+// Rota para a página de Login (Acessada por '/' ou '/login')
+app.get(['/', '/login'], (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/login.html'));
+});
+
+// Rota para a página de Cadastro
+app.get('/cadastro', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/cadastro.html'));
+});
+
+// Rota para a página principal do Jogo
+app.get('/game', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// ==========================================
+// 3. Rotas da API (POST e GET para lógica do jogo)
+// ==========================================
+
+// Rota de Cadastro de Usuário
+app.post('/register', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: "Preencha tudo" });
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
+  }
+
   try {
-    const hash = await bcrypt.hash(password, 10);
-    const query = `INSERT INTO users (username, password, points, coins, avatar, border) VALUES (?, ?, 0, 100, 'Dino', 'default')`;
-    const pgQuery = `INSERT INTO users (username, password, points, coins, avatar, border) VALUES ($1, $2, 0, 100, 'Dino', 'default')`;
-    
-    ejecutarQuery(isPostgres ? pgQuery : query, [username, hash], (err) => {
-      if (err) return res.status(400).json({ error: "Usuário já existe" });
-      res.json({ success: true });
-    });
-  } catch (e) {
-    res.status(500).json({ error: "Erro no servidor" });
+    // Verifica se o usuário já existe no banco
+    const userExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (userExists.rows.length > 0) {
+      return res.status(400).json({ error: 'Este nome de usuário já está em uso.' });
+    }
+
+    // Insere o novo usuário (Armazenando pontos zerados e elo Unranked por padrão)
+    await pool.query(
+      'INSERT INTO users (username, password, points, elo) VALUES ($1, $2, $3, $4)',
+      [username, password, 0, 'Unranked']
+    );
+
+    res.status(201).json({ message: 'Usuário cadastrado com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao cadastrar usuário:', error);
+    res.status(500).json({ error: 'Erro interno no servidor.' });
   }
 });
 
-app.post("/login", async (req, res) => {
+// Rota de Login do Usuário
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  const query = `SELECT * FROM users WHERE username = ?`;
-  const pgQuery = `SELECT * FROM users WHERE username = $1`;
 
-  ejecutarQuery(isPostgres ? pgQuery : query, [username], async (err, result) => {
-    if (err || !result || !result.row) return res.status(400).json({ error: "Usuário não encontrado" });
-    
-    const userRow = result.row;
-    const match = await bcrypt.compare(password, userRow.password);
-    if (!match) return res.status(400).json({ error: "Senha incorreta" });
-    
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
+  }
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1 AND password = $2', [username, password]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
+    }
+
+    // Login bem-sucedido: Retorna os dados necessários para o frontend salvar na Session/LocalStorage
+    const user = result.rows[0];
     res.json({
-      username: userRow.username,
-      points: parseInt(userRow.points) || 0,
-      coins: parseInt(userRow.coins) || 0,
-      avatar: userRow.avatar || "Dino",
-      border: userRow.border || "default"
+      message: 'Login realizado com sucesso!',
+      user: {
+        id: user.id,
+        username: user.username,
+        points: user.points,
+        elo: user.elo
+      }
     });
-  });
+  } catch (error) {
+    console.error('Erro ao realizar login:', error);
+    res.status(500).json({ error: 'Erro interno no servidor.' });
+  }
 });
 
-app.get("/words", (req, res) => {
-  res.json(words);
+// Rota para buscar Palavras do Jogo
+app.get('/words', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT word FROM words');
+    const wordsList = result.rows.map(row => row.word);
+    res.json(wordsList);
+  } catch (error) {
+    console.error('Erro ao buscar palavras:', error);
+    res.status(500).json({ error: 'Erro ao carregar banco de palavras.' });
+  }
 });
 
-app.get("/ranking", (req, res) => {
-  const q = `SELECT username, points, avatar, border FROM users ORDER BY points DESC LIMIT 50`;
-  ejecutarQuery(q, [], (err, result) => {
-    if (err) return res.status(500).json({ error: "Erro ao carregar ranking" });
-    res.json(result.rows || []);
-  });
+// Rota para buscar o Ranking Global
+app.get('/ranking', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT username, points, elo FROM users ORDER BY points DESC LIMIT 10');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erro ao buscar ranking:', error);
+    res.status(500).json({ error: 'Erro ao carregar o ranking.' });
+  }
 });
 
-app.post("/score", (req, res) => {
-  const { username, score, coinsEarned } = req.body;
-  const pts = parseInt(score) || 0;
-  const cns = parseInt(coinsEarned) || 0;
+// Rota para atualizar a Pontuação e o Elo do jogador
+app.post('/score', async (req, res) => {
+  const { username, points, elo } = req.body;
 
-  const q = `UPDATE users SET points = points + ?, coins = coins + ? WHERE username = ?`;
-  const pgQ = `UPDATE users SET points = points + $1, coins = coins + $2 WHERE username = $3`;
-
-  ejecutarQuery(isPostgres ? pgQ : q, [pts, cns, username], (err) => {
-    if (err) return res.status(500).json({ error: "Erro ao salvar dados" });
-    
-    const findQ = `SELECT points, coins FROM users WHERE username = ?`;
-    const findPgQ = `SELECT points, coins FROM users WHERE username = $1`;
-    ejecutarQuery(isPostgres ? findPgQ : findQ, [username], (err2, result) => {
-      if (err2 || !result.row) return res.status(500).json({ error: "Erro ao resgatar dados" });
-      res.json({ success: true, newPoints: result.row.points, newCoins: result.row.coins });
-    });
-  });
+  try {
+    await pool.query('UPDATE users SET points = $1, elo = $2 WHERE username = $3', [points, elo, username]);
+    res.json({ message: 'Pontuação atualizada com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao atualizar pontuação:', error);
+    res.status(500).json({ error: 'Erro ao salvar progresso.' });
+  }
 });
 
-app.post("/update-cosmetics", (req, res) => {
-  const { username, avatar, border } = req.body;
-  const q = `UPDATE users SET avatar = ?, border = ? WHERE username = ?`;
-  const pgQ = `UPDATE users SET avatar = $1, border = $2 WHERE username = $3`;
-
-  ejecutarQuery(isPostgres ? pgQ : q, [avatar, border, username], (err) => {
-    if (err) return res.status(500).json({ error: "Erro ao salvar cosméticos" });
-    res.json({ success: true });
-  });
+// Rota para atualizar Cosméticos/Customizações (Opcional, caso use no jogo)
+app.post('/update-cosmetics', async (req, res) => {
+  const { username, cosmetics } = req.body;
+  try {
+    await pool.query('UPDATE users SET cosmetics = $1 WHERE username = $2', [JSON.stringify(cosmetics), username]);
+    res.json({ message: 'Cosméticos atualizados com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao atualizar cosméticos:', error);
+    res.status(500).json({ error: 'Erro ao salvar customização.' });
+  }
 });
 
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+// ==========================================
+// Inicialização do Servidor
+// ==========================================
+const PORT = process.env.PORT || 5500;
+app.listen(PORT, () => {
+  console.log(`Servidor backend ativo e rodando na porta ${PORT}`);
+});

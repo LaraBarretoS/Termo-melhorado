@@ -15,16 +15,22 @@ app.use(express.json());
 const publicPath = path.join(__dirname, "../public");
 app.use(express.static(publicPath));
 
-function page(file) {
-  return (req, res) => {
-    res.sendFile(path.join(publicPath, file));
-  };
-}
+// Rotas de entrega de Páginas com caminhos absolutos para evitar loops no Render
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/login.html"));
+});
 
-app.get("/", page("login.html"));
-app.get("/login", page("login.html"));
-app.get("/cadastro", page("cadastro.html"));
-app.get("/game", page("index.html"));
+app.get("/login", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/login.html"));
+});
+
+app.get("/cadastro", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/cadastro.html"));
+});
+
+app.get("/game", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/index.html"));
+});
 
 app.get("/index.html", (req, res) => {
   res.redirect("/");
@@ -34,7 +40,7 @@ const wordsPath = path.join(__dirname, "words.json");
 const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 
 // ==========================================================================
-// BANCO DE DADOS (Postgres ou SQLite Local)
+// BANCO DE DADOS (Postgres Neon ou SQLite Local)
 // ==========================================================================
 let db;
 const isPostgres = !!process.env.DATABASE_URL;
@@ -44,7 +50,7 @@ if (isPostgres) {
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
   });
-  console.log("Conectado ao PostgreSQL do Render");
+  console.log("Conectado ao PostgreSQL do Neon");
 } else {
   const dbPath = path.join(__dirname, "database.db");
   db = new sqlite3.Database(dbPath, (err) => {
@@ -66,61 +72,25 @@ function ejecutarQuery(query, params, callback) {
   }
 }
 
-// Criar tabelas se não existirem
-const createTableQuery = `
-  CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    username TEXT UNIQUE,
-    password TEXT,
-    points INTEGER DEFAULT 0,
-    coins INTEGER DEFAULT 100,
-    avatar TEXT DEFAULT 'Dino',
-    border TEXT DEFAULT 'default'
-  );
-`;
-if (isPostgres) {
-  db.query(createTableQuery).catch(e => console.error(e));
-} else {
-  db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE,
-      password TEXT,
-      points INTEGER DEFAULT 0,
-      coins INTEGER DEFAULT 100,
-      avatar TEXT DEFAULT 'Dino',
-      border TEXT DEFAULT 'default'
-    )`);
-  });
-}
-
 // ==========================================================================
-// ROTAS DA API
+// ROTAS DA API (Compatibilidade Total Neon)
 // ==========================================================================
 
-app.post("/login", async (req, res) => {
+app.post("/register", async (req, res) => {
   const { username, password } = req.body;
-  const query = `SELECT * FROM users WHERE username = ?`;
-  const pgQuery = `SELECT * FROM users WHERE username = $1`;
-
-  ejecutarQuery(isPostgres ? pgQuery : query, [username], async (err, result) => {
-    if (err || !result || !result.row) {
-      return res.status(400).json({ error: "Usuário não encontrado" });
-    }
+  if (!username || !password) return res.status(400).json({ error: "Preencha tudo" });
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const query = `INSERT INTO users (username, password, points, coins, avatar, border) VALUES (?, ?, 0, 100, 'Dino', 'default')`;
+    const pgQuery = `INSERT INTO users (username, password, points, coins, avatar, border) VALUES ($1, $2, 0, 100, 'Dino', 'default')`;
     
-    const userRow = result.row;
-    const match = await bcrypt.compare(password, userRow.password);
-    if (!match) return res.status(400).json({ error: "Senha incorreta" });
-    
-    // Tratamento robusto para garantir que nenhuma propriedade vá nula ou quebrada ao front-end
-    res.json({
-      username: userRow.username,
-      points: parseInt(userRow.points) || 0,
-      coins: parseInt(userRow.coins) || 0,
-      avatar: userRow.avatar || "Dino",
-      border: userRow.border || "default"
+    ejecutarQuery(isPostgres ? pgQuery : query, [username, hash], (err) => {
+      if (err) return res.status(400).json({ error: "Usuário já existe" });
+      res.json({ success: true });
     });
-  });
+  } catch (e) {
+    res.status(500).json({ error: "Erro no servidor" });
+  }
 });
 
 app.post("/login", async (req, res) => {
@@ -129,16 +99,19 @@ app.post("/login", async (req, res) => {
   const pgQuery = `SELECT * FROM users WHERE username = $1`;
 
   ejecutarQuery(isPostgres ? pgQuery : query, [username], async (err, result) => {
-    if (err || !result.row) return res.status(400).json({ error: "Usuário não encontrado" });
-    const match = await bcrypt.compare(password, result.row.password);
+    if (err || !result || !result.row) return res.status(400).json({ error: "Usuário não encontrado" });
+    
+    const userRow = result.row;
+    const match = await bcrypt.compare(password, userRow.password);
     if (!match) return res.status(400).json({ error: "Senha incorreta" });
     
+    // Tratamento robusto mapeando chaves estritamente minúsculas vindas do Neon
     res.json({
-      username: result.row.username,
-      points: result.row.points,
-      coins: result.row.coins,
-      avatar: result.row.avatar,
-      border: result.row.border
+      username: userRow.username,
+      points: parseInt(userRow.points) || 0,
+      coins: parseInt(userRow.coins) || 0,
+      avatar: userRow.avatar || "Dino",
+      border: userRow.border || "default"
     });
   });
 });
@@ -175,7 +148,6 @@ app.post("/score", (req, res) => {
   });
 });
 
-// Ajustado para bater com o endpoint do frontend ("/update-cosmetics")
 app.post("/update-cosmetics", (req, res) => {
   const { username, avatar, border } = req.body;
   const q = `UPDATE users SET avatar = ?, border = ? WHERE username = ?`;

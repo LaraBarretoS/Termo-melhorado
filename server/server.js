@@ -12,11 +12,23 @@ const PORT = process.env.PORT || 5500;
 app.use(cors());
 app.use(express.json()); 
 
-// CAMINHO RESOLVIDO: Garante estabilidade na localização de scripts estáticos no Render
-const publicPath = path.resolve(__dirname, "../public");
+// ==========================================================================
+// TRATAMENTO DINÂMICO DE CAMINHOS (Mata o erro do Unexpected Token '<')
+// ==========================================================================
+let publicPath = path.resolve(__dirname, "../public");
+
+// Se o Render estiver executando a partir da raiz, ajusta o caminho automaticamente
+if (!fs.existsSync(path.join(publicPath, "login.html"))) {
+  publicPath = path.resolve(process.cwd(), "public");
+}
+if (!fs.existsSync(path.join(publicPath, "login.html"))) {
+  publicPath = path.resolve(__dirname, "public");
+}
+
+console.log("Pasta pública localizada com sucesso em:", publicPath);
 app.use(express.static(publicPath));
 
-// Rotas de entrega de Páginas usando caminhos absolutos validados
+// Rotas de entrega de Páginas usando caminhos absolutos validados dinamicamente
 app.get("/", (req, res) => {
   res.sendFile(path.join(publicPath, "login.html"));
 });
@@ -38,7 +50,10 @@ app.get("/index.html", (req, res) => {
 });
 
 // Resgate do arquivo JSON de palavras corrigido
-const wordsPath = path.resolve(__dirname, "words.json");
+let wordsPath = path.resolve(__dirname, "words.json");
+if (!fs.existsSync(wordsPath)) {
+  wordsPath = path.resolve(process.cwd(), "server/words.json");
+}
 const words = JSON.parse(fs.readFileSync(wordsPath, "utf8"));
 
 // ==========================================================================
@@ -54,7 +69,10 @@ if (isPostgres) {
   });
   console.log("Conectado ao PostgreSQL do Neon");
 } else {
-  const dbPath = path.resolve(__dirname, "database.db");
+  let dbPath = path.resolve(__dirname, "database.db");
+  if (!fs.existsSync(dbPath)) {
+    dbPath = path.resolve(process.cwd(), "server/database.db");
+  }
   db = new sqlite3.Database(dbPath, (err) => {
     if (err) console.error("Erro SQLite:", err.message);
     else console.log("Conectado ao SQLite Local (database.db)");
@@ -107,7 +125,6 @@ app.post("/login", async (req, res) => {
     const match = await bcrypt.compare(password, userRow.password);
     if (!match) return res.status(400).json({ error: "Senha incorreta" });
     
-    // Mapeamento das chaves minúsculas vindas do Neon
     res.json({
       username: userRow.username,
       points: parseInt(userRow.points) || 0,

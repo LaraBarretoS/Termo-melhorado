@@ -98,21 +98,29 @@ if (isPostgres) {
 // ROTAS DA API
 // ==========================================================================
 
-app.post("/register", async (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: "Preencha tudo" });
-  try {
-    const hash = await bcrypt.hash(password, 10);
-    const query = `INSERT INTO users (username, password, points, coins) VALUES (?, ?, 0, 100)`;
-    const pgQuery = `INSERT INTO users (username, password, points, coins) VALUES ($1, $2, 0, 100)`;
+  const query = `SELECT * FROM users WHERE username = ?`;
+  const pgQuery = `SELECT * FROM users WHERE username = $1`;
+
+  ejecutarQuery(isPostgres ? pgQuery : query, [username], async (err, result) => {
+    if (err || !result || !result.row) {
+      return res.status(400).json({ error: "Usuário não encontrado" });
+    }
     
-    ejecutarQuery(isPostgres ? pgQuery : query, [username, hash], (err) => {
-      if (err) return res.status(400).json({ error: "Usuário já existe" });
-      res.json({ success: true });
+    const userRow = result.row;
+    const match = await bcrypt.compare(password, userRow.password);
+    if (!match) return res.status(400).json({ error: "Senha incorreta" });
+    
+    // Tratamento robusto para garantir que nenhuma propriedade vá nula ou quebrada ao front-end
+    res.json({
+      username: userRow.username,
+      points: parseInt(userRow.points) || 0,
+      coins: parseInt(userRow.coins) || 0,
+      avatar: userRow.avatar || "Dino",
+      border: userRow.border || "default"
     });
-  } catch (e) {
-    res.status(500).json({ error: "Erro no servidor" });
-  }
+  });
 });
 
 app.post("/login", async (req, res) => {

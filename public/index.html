@@ -3,138 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Termo Clone</title>
+  <title>Termo Profissional</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-default" id="game-body">
 
-  <div class="top-cosmetics-bar">
-    <button onclick="openCosmeticsModal()" class="btn-toggle-cosmetics">✨ Customizar Perfil (Foto / Bordas)</button>
-  </div>
-
-  <div class="main-layout">
+  <header class="game-header">
+    <h1 onclick="showScreen('gameplay-screen')">TERMO</h1>
     
-    <div class="side-panel left-panel">
-      <div class="profile-section">
-        <button onclick="logout()" class="btn-logout-top" title="Sair da Conta">✕ Sair</button>
+    <div class="header-user-zone">
+      <div class="avatar-container-clickable" onclick="showScreen('cosmetics-screen')">
+        <img id="profile-avatar-img" src="assets/avatars/Dino.jpg" alt="Avatar" class="header-avatar">
+        <img id="profile-border-img" src="" alt="Borda" class="header-border-overlay" style="display: none;">
+      </div>
+      <button onclick="logout()" class="btn-logout-small" title="Sair da Conta">✕</button>
+    </div>
+  </header>
 
-        <h2>Perfil</h2>
+  <div id="status"></div>
+
+  <main id="gameplay-screen" class="screen screen-gameplay active">
+    <div class="main-game-layout">
+      
+      <aside class="left-event-panel" id="left-event-panel">
+        <h3 style="color: var(--text-accent); margin-top: 0;">Evento Ativo</h3>
+        <div id="event-timer" style="font-size: 13px; margin-bottom: 12px;">Carregando evento...</div>
+        <div id="roulette-display" style="font-weight: bold; margin-bottom: 12px; font-size: 14px;">🎰 1x BÔNUS</div>
+        <button onclick="showScreen('ranking-screen')" style="width: 100%; padding: 10px; background: var(--tile-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; font-weight: bold; cursor: pointer;">VER RANKINGS</button>
+      </aside>
+
+      <section class="center-game-panel">
         
-        <div class="profile-header-container">
-          <div class="profile-avatar-wrapper">
-            <img id="profile-avatar-img" src="assets/avatars/Dino.jpg" alt="Avatar" class="profile-avatar-circle">
-            <img id="profile-border-img" src="" alt="Borda" class="profile-border-overlay" style="display: none;">
+        <div id="boards-layout-container" class="boards-layout-container mode-1-active">
           </div>
 
-          <div class="profile-text-elo-wrapper">
-            <div class="profile-info-texts">
-              <p>Jogador: <span id="profile-username">-</span></p>
-              <p id="profile-points-wrapper">Pontos: <span id="profile-points">0</span></p>
-            </div>
-            
-            <div class="profile-elo-icon-holder">
-              <img id="profile-elo-icon" src="" alt="Elo" class="elo-icon-img" style="display: none;">
-            </div>
-          </div>
+        <div class="keyboard-wrapper">
+          <div id="keyboard"></div>
         </div>
-        
-        <div id="event-panel" class="lightning-event-card" style="display: none;">
-          <h3 class="event-title-pulse">⚡ EVENTO RELÂMPAGO!</h3>
-          <p id="event-timer">O evento acaba em: --:--:--</p>
-          
-          <div id="roulette-container">
-            <div id="roulette-display">
-              🎰 ?x MULTIPLICADOR
-            </div>
-          </div>
 
-          <button id="btn-spin" onclick="spinRoulette()">GIRAR ROLETA GRÁTIS</button>
-        </div>
-        
-        <label for="theme-select" style="display: block; margin-top: 15px;">Tema do Jogo:</label>
-        <select id="theme-select" onchange="changeTheme(this.value)">
-          <option value="default">Padrão (Escuro)</option>
-          <option value="dark-red">Vampire (Preto e Vermelho)</option>
-          <option value="light">Claro</option>
-          <option value="neon">Cyber Neon</option>
-          <option value="rosa">Doce Rosa (Claro)</option>
-          <option value="rosa-escuro">Rosa Escuro (Neon)</option>
-          <option value="azul">Oceano Azul</option>
-          <option value="verde">Floresta Verde</option>
-          <option value="vermelho">Fogo Vermelho</option>
-          <option value="purple">Roxo Neon</option>
-        </select>
-        
-        <button onclick="openAchievementsModal()" class="btn-achievements">Conquistas</button>
+      </section>
+
+    </div>
+  </main>
+
+  <main id="ranking-screen" class="screen ranking-main-container">
+    <div class="ranking-board-wrapper">
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th style="width: 15%;">Posição</th>
+            <th style="width: 50%;">Jogador</th>
+            <th style="width: 35%;">Pontuação (PDL)</th>
+          </tr>
+        </thead>
+        <tbody id="ranking-body">
+          </tbody>
+      </table>
+    </div>
+    <button onclick="showScreen('gameplay-screen')" class="btn-global-action">Voltar ao Jogo</button>
+  </main>
+
+  <main id="cosmetics-screen" class="screen cosmetics-main-panel">
+    
+    <nav class="shop-tabs-sidebar">
+      <button class="tab-button active-tab" onclick="changeShopTab('themes', this)">Themes</button>
+      <button class="tab-button" onclick="changeShopTab('borders', this)">Borders</button>
+      <button class="tab-button" onclick="changeShopTab('events', this)">Eventos</button>
+      <button class="tab-button" onclick="changeShopTab('icons', this)">Icons</button>
+    </nav>
+
+    <section class="shop-vitrine-wrapper" id="shop-vitrine">
+      </section>
+
+    <div class="cosmetics-footer-controls">
+      <div class="coins-display-box">
+        🪙 Moedas: <span id="player-coins-value">0</span>
       </div>
+      <button onclick="showScreen('gameplay-screen')" class="btn-global-action">Voltar</button>
     </div>
 
-    <div class="game-container">
-      <h1>TERMO</h1>
-      <div id="board"></div>
-      <p id="status"></p>
-      <div id="keyboard" class="keyboard-container"></div>
-    </div>
-
-    <div class="side-panel right-panel">
-      <div class="ranking-section">
-        <h2>Top 10 Ranking</h2>
-        <ol id="ranking-list"></ol>
-      </div>
-    </div>
-
-  </div>
-
-  <div id="cosmetics-modal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeCosmeticsModal();">
-    <div class="modal-content" style="max-width: 550px; position: relative;">
-      <span class="close-modal-btn" onclick="closeCosmeticsModal()" style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; opacity: 0.7;">&times;</span>
-      
-      <h2>Customização de Perfil</h2>
-      <p style="font-size: 14px; opacity: 0.8; margin-bottom: 20px;">Escolha seu visual e clique em Salvar para aplicar.</p>
-      
-      <div class="cosmetics-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;">
-        <button onclick="switchCosmeticsTab('tab-avatars')" id="btn-tab-avatars" class="tab-btn active" style="padding: 8px 16px; cursor: pointer;">Foto de Perfil</button>
-        <button onclick="switchCosmeticsTab('tab-borders')" id="btn-tab-borders" class="tab-btn" style="padding: 8px 16px; cursor: pointer;">Bordas de Destaque</button>
-      </div>
-
-      <div id="tab-avatars" class="cosmetics-panel">
-        <div class="cosmetics-grid" id="grid-avatars"></div>
-      </div>
-
-      <div id="tab-borders" class="cosmetics-panel" style="display: none;">
-        <div class="cosmetics-grid" id="grid-borders"></div>
-      </div>
-
-      <div style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-        <button class="m-btn m-btn-next" style="background-color: #ff4655; color: #fff; width: 100%; font-weight: bold; padding: 12px; border: none; border-radius: 4px; cursor: pointer;" onclick="salvarEAtualizarPagina()">
-          Salvar Alterações
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div id="achievements-modal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeAchievementsModal();">
-    <div class="modal-content" style="max-width: 500px;">
-      <h2>Suas Conquistas</h2>
-      <p>Acompanhe sua jornada rumo aos Elos mais altos do Servidor!</p>
-      
-      <div class="achievements-list" style="text-align: left; max-height: 300px; overflow-y: auto; margin-bottom: 20px; padding-right: 5px;">
-        <div class="achievement-card" id="ach-ferro"><span class="ach-status">🔒</span> <strong>Início de Tudo:</strong> Alcance o Elo Ferro.</div>
-        <div class="achievement-card" id="ach-bronze"><span class="ach-status">🔒</span> <strong>Saindo da Lama:</strong> Alcance o Elo Bronze.</div>
-        <div class="achievement-card" id="ach-prata"><span class="ach-status">🔒</span> <strong>Evolução Constante:</strong> Alcance o Elo Prata.</div>
-        <div class="achievement-card" id="ach-ouro"><span class="ach-status">🔒</span> <strong>Brilho Dourado:</strong> Alcance o Elo Ouro.</div>
-        <div class="achievement-card" id="ach-platina"><span class="ach-status">🔒</span> <strong>Estrategista Frio:</strong> Alcance o Elo Platina.</div>
-        <div class="achievement-card" id="ach-diamante"><span class="ach-status">🔒</span> <strong>Mente de Diamante:</strong> Alcance o Elo Diamante.</div>
-        <div class="achievement-card" id="ach-ascendente"><span class="ach-status">🔒</span> <strong>Ascensão Heroica:</strong> Alcance o Elo Ascendente.</div>
-        <div class="achievement-card" id="ach-imortal1"><span class="ach-status">🔒</span> <strong>Veterano do Topo:</strong> Alcance o Elo Imortal 1.</div>
-        <div class="achievement-card" id="ach-imortal2"><span class="ach-status">🔒</span> <strong>Lenda Viva:</strong> Alcance o Elo Imortal 2.</div>
-        <div class="achievement-card" id="ach-imortal3"><span class="ach-status">🔒</span> <strong>Portão do Olimpo:</strong> Alcance o Elo Imortal 3.</div>
-        <div class="achievement-card" id="ach-radiante"><span class="ach-status">🔒</span> <strong>Divindade Absoluta:</strong> Alcance o Elo Radiante.</div>
-      </div>
-
-      <button onclick="closeAchievementsModal()" class="m-btn m-btn-reset" style="width: 100%;">Fechar</button>
-    </div>
-  </div>
+  </main>
 
   <script src="game.js"></script>
 </body>

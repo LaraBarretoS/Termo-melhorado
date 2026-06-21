@@ -25,9 +25,8 @@ let eventMultiplier = 1; // 1x por padrão (sem evento)
 let eventActive = false;
 let timerInterval = null;
 
-
 // ==========================================================================
-// BLOCO: MAPEAMENTO DE ARQUIVOS FÍSICOS (AVATARES E BORDAS)
+// BLOCO ATUALIZADO: MAPEAMENTO DE ARQUIVOS FÍSICOS (AVATARES E BORDAS)
 // ==========================================================================
 const listaAvataresReais = ["Dino", "Dog", "Freddy", "Gator", "Gengar", "Giraffe", "Monkey", "Shrimp", "Bunny"];
 
@@ -39,13 +38,12 @@ const listaBordasReais = [
   { id: "gold-border", nome: "Borda Ouro" },
   { id: "platinum-border", nome: "Borda Platina" },
   { id: "diamond-border", nome: "Borda Diamante" },
-  { id: "ascendant-border", nome: "Borda Ascendente" }, 
+  { id: "ascendant-border", nome: "Borda Ascendente" },
   { id: "imortal-1-border", nome: "Borda Imortal I" },
   { id: "imortal-2-border", nome: "Borda Imortal II" },
   { id: "imortal-3-border", nome: "Borda Imortal III" },
-  { id: "Radiant-border", nome: "Borda Radiante" } 
+  { id: "radiant-border", nome: "Borda Radiante" }
 ];
-
 
 // ==========================================================================
 // BLOCO: REGRAS DE ELO E PADRONIZAÇÃO DE IMAGENS (SISTEMA RANKED)
@@ -83,7 +81,7 @@ function formatarNomeImg(nomeElo) {
 
 
 // ==========================================================================
-// BLOCO: POP-UP INTERATIVO DE COSMÉTICOS (LOJA / MODAL)
+// BLOCO ATUALIZADO: POP-UP INTERATIVO DE COSMÉTICOS (LOJA / MODAL)
 // ==========================================================================
 function openCosmeticsModal() {
   const modal = document.getElementById("cosmetics-modal");
@@ -140,7 +138,7 @@ function renderCosmeticsGrid() {
     "imortal-1-border": 5000000,
     "imortal-2-border": 7000000,
     "imortal-3-border": 9000000,
-    "Radiant-border": 12000000
+    "radiant-border": 12000000 // Corrigido para minúsculo para casar com o banco e CSS
   };
 
   gridBorders.innerHTML = "";
@@ -196,23 +194,52 @@ function selecionarAvatar(nomeAvatar) {
   if (!currentUser) return;
   currentUser.avatar = nomeAvatar;
   localStorage.setItem("user", JSON.stringify(currentUser));
+  
+  // Atualiza a vitrine de seleção
   renderCosmeticsGrid(); 
-  salvarEAtualizarPagina(); 
-}
-
-function getMaxRowsForCurrentLevel() {
-  return currentLevel === 3 ? 8 : MAX_ROWS;
+  
+  // ATUALIZAÇÃO VISUAL EM TEMPO REAL (Muda no cabeçalho instantaneamente)
+  const imgAvatarTopo = document.getElementById("profile-avatar-img");
+  if (imgAvatarTopo) {
+    const extensao = nomeAvatar === "Bunny" ? "png" : "jpg";
+    imgAvatarTopo.src = `assets/avatars/${nomeAvatar}.${extensao}`;
+  }
+  
+  // Sincroniza em background sem dar reload na página
+  salvarCosmeticosNoBanco(); 
 }
 
 function selecionarBorda(idBorda) {
   if (!currentUser) return;
   currentUser.border = idBorda;
   localStorage.setItem("user", JSON.stringify(currentUser));
+  
+  // Atualiza a vitrine de seleção
   renderCosmeticsGrid(); 
-  salvarEAtualizarPagina(); 
+  
+  // ATUALIZAÇÃO VISUAL EM TEMPO REAL (Muda no cabeçalho instantaneamente)
+  const imgBordaTopo = document.getElementById("profile-border-img");
+  if (imgBordaTopo) {
+    if (idBorda === "default" || !idBorda) {
+      imgBordaTopo.style.display = "none";
+      imgBordaTopo.src = "";
+    } else {
+      imgBordaTopo.style.display = "block";
+      imgBordaTopo.src = `assets/borders/${idBorda}.png`;
+    }
+  }
+  
+  // Sincroniza em background sem dar reload na página
+  salvarCosmeticosNoBanco(); 
 }
 
-async function salvarEAtualizarPagina() {
+// MANTÉM TODA A REGRA DE NEGÓCIO ORIGINAL E ESSENCIAL DO SEU NÍVEL 3 (NÃO REMOVER)
+function getMaxRowsForCurrentLevel() {
+  return currentLevel === 3 ? 8 : MAX_ROWS;
+}
+
+// NOVO MÉTODO DE SALVAMENTO FLUIDO (Substituiu o antigo salvarEAtualizarPagina)
+async function salvarCosmeticosNoBanco() {
   if (!currentUser) return;
   try {
     await fetch("/update-cosmetics", {
@@ -224,13 +251,11 @@ async function salvarEAtualizarPagina() {
         border: currentUser.border || "default"
       })
     });
-    window.location.reload();
+    // O reload foi removido daqui para garantir a fluidez do jogo!
   } catch (err) {
-    console.error("Erro ao sincronizar cosméticos com o banco:", err);
-    window.location.reload();
+    console.error("Erro silencioso ao sincronizar cosméticos com o banco:", err);
   }
 }
-
 
 // ==========================================================================
 // BLOCO: VERIFICAÇÃO DE PERFIL E SINCRONIZAÇÃO DE USUÁRIO

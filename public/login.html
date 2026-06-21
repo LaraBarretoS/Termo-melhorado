@@ -4,28 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Termo Clone</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
-  <div class="container">
-    <h1>TERMO</h1>
+  <div class="auth-container">
+    <div class="auth-box">
+      <h1 class="auth-logo">TERMO</h1>
+      <p class="auth-subtitle">Faça login para salvar o seu progresso</p>
 
-    <form onsubmit="event.preventDefault(); login();" style="display: flex; flex-direction: column; gap: 15px;">
-      <input type="text" id="username" placeholder="Usuário" required>
-      <input type="password" id="password" placeholder="Senha" required>
+      <form onsubmit="event.preventDefault(); login();" class="auth-form">
+        <div class="input-group">
+          <input type="text" id="username" placeholder="Usuário" required autocomplete="username">
+        </div>
+        <div class="input-group">
+          <input type="password" id="password" placeholder="Senha" required autocomplete="current-password">
+        </div>
 
-      <div class="buttons">
-        <button type="button" onclick="window.location.href='/cadastro'">Cadastrar</button>
-        <button type="submit">Entrar</button>
-      </div>
-    </form>
+        <div class="buttons">
+          <button type="button" class="btn-secondary" onclick="window.location.href='/cadastro'">Cadastrar</button>
+          <button type="submit" class="btn-primary">Entrar</button>
+        </div>
+      </form>
 
-    <p>O DB (Banco de dados) do jogo foi alterado, porfavor, informe qual Elo você estava e me mande no discord para que eu possa adicionar os pontos em sua conta.</p>
+      <p id="message" class="auth-message"></p>
+    </div>
 
-    <p id="message"></p>
+    <div class="auth-notice">
+      <p>ℹ️ O Banco de dados do jogo foi alterado. Por favor, informe qual Elo você estava e envie no Discord para adicionarmos seus pontos.</p>
+    </div>
   </div>
 
-  <script src="login.js"></script>
+  <script src="/login.js"></script>
 </body>
 </html>

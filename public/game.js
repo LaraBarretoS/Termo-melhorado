@@ -18,6 +18,7 @@ let totalRoundScore = 0;
 let guesses = [];
 let boardsData = []; 
 
+// Captura o usuário de forma segura contra erros de JSON
 let currentUser = null;
 try {
   currentUser = JSON.parse(localStorage.getItem("user"));
@@ -25,7 +26,13 @@ try {
   console.error("Erro ao ler dados do usuário do localStorage:", e);
 }
 
-// Variáveis do Novo Sistema de Evento
+// PROTEÇÃO CONTRA LOOPS: Se não houver uma conta válida salva, desloga e manda pro login
+if (!currentUser || !currentUser.username) {
+  localStorage.removeItem("user");
+  window.location.href = "/login";
+}
+
+// Variáveis do Novo Sistema de Evento (MANTIDAS COM SUCESSO)
 let eventMultiplier = 1; // 1x por padrão (sem evento)
 let eventActive = false;
 let timerInterval = null;

@@ -1,6 +1,15 @@
 {
   "version": 2,
-  "cleanUrls": true,
+  "builds": [
+    {
+      "src": "server/server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/(.*)",
+      "use": "@vercel/static"
+    }
+  ],
   "rewrites": [
     {
       "source": "/",
@@ -17,6 +26,30 @@
     {
       "source": "/game",
       "destination": "/public/index.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/server/server.js"
+    },
+    {
+      "source": "/login-api",
+      "destination": "/server/server.js"
+    },
+    {
+      "source": "/words",
+      "destination": "/server/server.js"
+    },
+    {
+      "source": "/ranking",
+      "destination": "/server/server.js"
+    },
+    {
+      "source": "/score",
+      "destination": "/server/server.js"
+    },
+    {
+      "source": "/update-cosmetics",
+      "destination": "/server/server.js"
     },
     {
       "source": "/(.*)",

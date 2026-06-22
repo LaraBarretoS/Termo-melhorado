@@ -46,6 +46,17 @@ const listaBordasReais = [
   { id: "Radiant-border", nome: "Borda Radiante" } 
 ];
 
+//================================================== Logout ===========================================//
+
+// Função para deslogar o usuário e limpar a sessão
+function logout() {
+  // Remove os dados do usuário salvos no navegador
+  localStorage.removeItem("user");
+  
+  // Redireciona de volta para a tela de login
+  window.location.href = "/login";
+}
+
 
 // ==========================================================================
 // BLOCO: REGRAS DE ELO E PADRONIZAÇÃO DE IMAGENS (SISTEMA RANKED)
